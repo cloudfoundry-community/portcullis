@@ -1,8 +1,8 @@
 # Portcullis Design Doc
 
 Portcullis is a transparent pseudo-broker that sets up security groups for
-other brokers on bind calls. In order to acheive this, it acts as a
-man-in the-middle between the CF Cloud Controller and the target service broker,
+other brokers on bind calls. In order to achieve this, it acts as a
+man-in-the-middle between the CF Cloud Controller and the target service broker,
 parsing out bind calls, and forwarding all information to the service broker
 backend. To Cloud Foundry, Portcullis appears to be the target service broker,
 and to the service broker, Portcullis appears to be Cloud Foundry.
@@ -64,7 +64,7 @@ no enforcement of this, and there are definitely brokers which deviate in a way
 that this heuristic will not work. So while Portcullis will look for this
 information by default, a configuration of what to parse in the broker to get
 the address and port information can be provided to Portcullis during broker
-creation or by edit endpoint afterward. Also, there should be a way to specify
+creation or by editing endpoint afterward. Also, there should be a way to specify
 to open a range of ports, or not open any egress at all for this broker when it
 is bound.
 
