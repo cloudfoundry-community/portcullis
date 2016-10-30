@@ -97,12 +97,9 @@ to service binding are stored.
 As it stands, your Cloud Foundry probably has service brokers mapped to the
 Cloud Controller the "normal way". While the most direct path to using
 Portcullis could involve deleting your current service broker (and, by extension,
-all existing service instances and bindings), this may lead to a loss of service
-data if your service broker discards an application's data when a service
-instance is deprovisioned. This could reasonably be seen as unacceptable.
-
-Updating the service broker registration with Cloud Foundry (`update-service-broker`)
-can instead just allow the Cloud Controller to route all requests through Portcullis
+all existing service instances, bindings, and potentially user data), instead 
+updating the service broker registration with Cloud Foundry (`update-service-broker`) 
+can instead just allow  the Cloud Controller to route all requests through Portcullis 
 when contacting the broker. No loss of data required.
 
 ## Interface
