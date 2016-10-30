@@ -101,18 +101,9 @@ all existing service instances and bindings), this may lead to a loss of service
 data if your service broker discards an application's data when a service
 instance is deprovisioned. This could reasonably be seen as unacceptable.
 
-An alternative strategy is to create new service broker mappings with Cloud
-Foundry that are configured through Portcullis, and to deprecate the old broker
-mappings using `cf disable-service-access`. This way, all new service instances
-would be made through Portcullis. The downside to this is that some "manual"
-(see: not done by Portcullis) cleanup of previously existing security-groups
-needs to be made as the transition to Portcullis is made over time. Portcullis
-will never be responible for deleting security-groups that it did not itself
-create - that is, Portcullis _opens_ traffic, and the CF admin is responsible
-for keeping the default restrictions of Cloud Foundry as closed as they wish.
-
-By far, beginning to use Portcullis after having used Cloud Foundry without it
-is the biggest obstacle of this design.
+Updating the service broker registration with Cloud Foundry (`update-service-broker`)
+can instead just allow the Cloud Controller to route all requests through Portcullis
+when contacting the broker. No loss of data required.
 
 ## Interface
 
