@@ -1,0 +1,7 @@
+database:
+  type: dummy
+  dbname: test
+  username: testuser
+  password: testpass
+  location: localhost
+  port: 5524
