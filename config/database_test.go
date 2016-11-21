@@ -25,12 +25,12 @@ var _ = Describe("Database", func() {
 			})
 
 			It("should populate its members as expected", func() {
-				Expect(dbconf.Type).To(Equal("dummy"))
-				Expect(dbconf.DBName).To(Equal("test"))
-				Expect(dbconf.Location).To(Equal("localhost"))
-				Expect(dbconf.Port).To(Equal(5524))
-				Expect(dbconf.Username).To(Equal("testuser"))
-				Expect(dbconf.Password).To(Equal("testpass"))
+				Expect(dbconf.Type).To(Equal("configtest"))
+				Expect(dbconf.Config["dbname"]).To(Equal("test"))
+				Expect(dbconf.Config["location"]).To(Equal("localhost"))
+				Expect(dbconf.Config["port"]).To(Equal(5524))
+				Expect(dbconf.Config["username"]).To(Equal("testuser"))
+				Expect(dbconf.Config["password"]).To(Equal("testpass"))
 			})
 
 			It("should not throw an error", func() {
