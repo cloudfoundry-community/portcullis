@@ -1,5 +1,8 @@
 package dummy
 
+//This package will register this store type with the store package when it is
+// imported (use an underscore import)
+
 import (
 	"fmt"
 

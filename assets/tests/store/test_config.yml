@@ -1,0 +1,7 @@
+#THIS FILE IS NOT THE ONE YOU WANT TO EDIT
+#If you want to configure the store tests to point to a different backend,
+# add a "test_config.yml" file to the store source code directory, and it will
+# override this one, but that one is gitignored
+type: "dummy"
+config:
+  confirm: true
