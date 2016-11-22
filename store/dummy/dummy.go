@@ -107,3 +107,22 @@ func (d *Dummy) DeleteMapping(name string) error {
 	delete(d.storage, name)
 	return nil
 }
+
+//Size returns the length of the storage map
+func (d *Dummy) Size() (int, error) {
+	if !d.initialized {
+		return -1, fmt.Errorf("Dummy not initialized")
+	}
+
+	return len(d.storage), nil
+}
+
+//ClearMappings makes the internal storage a new memory map, wiping out all
+//preexisting data
+func (d *Dummy) ClearMappings() error {
+	if !d.initialized {
+		return fmt.Errorf("Dummy not initialized")
+	}
+	d.storage = map[string]store.Mapping{}
+	return nil
+}

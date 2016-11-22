@@ -57,3 +57,16 @@ func (p *Postgres) DeleteMapping(name string) error {
 	//TODO
 	return fmt.Errorf("Not yet implemented")
 }
+
+//Size returns the number of mapping rows in the Postgres database
+func (p *Postgres) Size() (int, error) {
+	//TODO
+	return -1, fmt.Errorf("Not yet implemented")
+}
+
+//ClearMappings removes all mappings from the Postgres database by truncating
+//the mapping table
+func (p *Postgres) ClearMappings() error {
+	//TODO
+	return fmt.Errorf("Not yet implemented")
+}

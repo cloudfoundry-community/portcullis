@@ -32,6 +32,12 @@ type Store interface {
 	//DeleteMapping should remove an existing mapping from the store, and return
 	//ErrNotFound if the Mapping to remove did not exist in the store
 	DeleteMapping(string) error
+	//Size should return the number of mappings in the store
+	Size() (int, error)
+	//ClearMappings should delete all mappings from the database. A user should not need
+	//to reinitialize the database, but ListMappings should return an empty list
+	//after a call to ClearMappings
+	ClearMappings() error
 }
 
 var (
@@ -94,6 +100,17 @@ func EditMapping(m Mapping) error {
 //ErrNotFound if the Mapping to remove did not exist in the store
 func DeleteMapping(name string) error {
 	return activeStore.DeleteMapping(name)
+}
+
+//ClearMappings deletes all existing mappings from the store. Mostly here for
+//making testing more reliable
+func ClearMappings() error {
+	return activeStore.ClearMappings()
+}
+
+//Size returns the number of mappings in the store
+func Size() (int, error) {
+	return activeStore.Size()
 }
 
 //RegisterStoreType maps a type of store to a string that names it, such that
