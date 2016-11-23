@@ -50,8 +50,7 @@ var _ = Describe("Store", func() {
 			JustBeforeEach(func() {
 				numToInsert := 100
 				for i := 0; i < numToInsert; i++ {
-					rname := genRandomString()
-					innerErr := AddMapping(Mapping{Name: rname, Location: rname})
+					innerErr := AddMapping(genTestMapping())
 					Expect(innerErr).NotTo(HaveOccurred())
 				}
 				inserted, innerErr := ListMappings()
@@ -81,11 +80,10 @@ var _ = Describe("Store", func() {
 				Expect(err).To(BeNil())
 			})
 			Context("When adding a unique value", func() {
-				var rName, rLoc string
+				var addedMapping Mapping
 				JustBeforeEach(func() {
-					rName = genRandomString()
-					rLoc = genRandomString()
-					err = AddMapping(Mapping{Name: rName, Location: rLoc})
+					addedMapping = genTestMapping()
+					err = AddMapping(addedMapping)
 				})
 
 				It("should not throw an error", func() {
@@ -95,7 +93,7 @@ var _ = Describe("Store", func() {
 				Context("And then retrieving it with GetMapping", func() {
 					var retMapping Mapping
 					JustBeforeEach(func() {
-						retMapping, err = GetMapping(rName)
+						retMapping, err = GetMapping(addedMapping.Name)
 					})
 
 					It("should not throw an error", func() {
@@ -103,17 +101,17 @@ var _ = Describe("Store", func() {
 					})
 
 					Specify("The returned mapping should have the proper name", func() {
-						Expect(retMapping.Name).To(Equal(rName))
+						Expect(retMapping.Name).To(Equal(addedMapping.Name))
 					})
 
 					Specify("The returned mapping should have the proper location", func() {
-						Expect(retMapping.Location).To(Equal(rLoc))
+						Expect(retMapping.Location).To(Equal(addedMapping.Location))
 					})
 				})
 
 				Context("And then removing it with DeleteMapping", func() {
 					JustBeforeEach(func() {
-						err = DeleteMapping(rName)
+						err = DeleteMapping(addedMapping.Name)
 					})
 
 					It("should not throw an error", func() {
@@ -122,7 +120,7 @@ var _ = Describe("Store", func() {
 
 					Context("Then attempting to readd the deleted mapping", func() {
 						JustBeforeEach(func() {
-							err = AddMapping(Mapping{Name: rName, Location: rLoc})
+							err = AddMapping(addedMapping)
 						})
 
 						It("should not err", func() {
@@ -133,14 +131,11 @@ var _ = Describe("Store", func() {
 			})
 
 			Context("When adding a mapping with an already existing name", func() {
-				var rName string
 				JustBeforeEach(func() {
-					rName = genRandomString()
-					rLoc1 := genRandomString()
-					rLoc2 := genRandomString()
-					err = AddMapping(Mapping{Name: rName, Location: rLoc1})
+					firstMapping := genTestMapping()
+					err = AddMapping(firstMapping)
 					Expect(err).To(BeNil())
-					err = AddMapping(Mapping{Name: rName, Location: rLoc2})
+					err = AddMapping(genTestMapping().WithName(firstMapping.Name))
 				})
 
 				It("should throw an error", func() {
@@ -150,12 +145,10 @@ var _ = Describe("Store", func() {
 
 			Context("When adding values with different names", func() {
 				JustBeforeEach(func() {
-					rName1 := genRandomString()
-					rName2 := genRandomString()
-					rLoc := genRandomString()
-					err = AddMapping(Mapping{Name: rName1, Location: rLoc})
+					firstMapping := genTestMapping()
+					err = AddMapping(firstMapping)
 					Expect(err).To(BeNil())
-					err = AddMapping(Mapping{Name: rName2, Location: rLoc})
+					err = AddMapping(firstMapping.WithName(genRandomString()))
 				})
 
 				It("should not throw an error", func() {
@@ -172,7 +165,7 @@ var _ = Describe("Store", func() {
 
 			Context("With a mapping that exists", func() {
 				BeforeEach(func() {
-					targetMapping = Mapping{Name: genRandomString(), Location: genRandomString()}
+					targetMapping = genTestMapping()
 					err = AddMapping(targetMapping)
 					Expect(err).NotTo(HaveOccurred())
 				})
@@ -195,7 +188,7 @@ var _ = Describe("Store", func() {
 					})
 					Context("and then it is readded", func() {
 						BeforeEach(func() {
-							targetMapping = Mapping{Name: genRandomString(), Location: genRandomString()}
+							targetMapping = genTestMapping()
 							err = AddMapping(targetMapping)
 							Expect(err).NotTo(HaveOccurred())
 						})
@@ -242,7 +235,7 @@ var _ = Describe("Store", func() {
 			Context("With a single object in the store", func() {
 				var targetMapping Mapping
 				BeforeEach(func() {
-					targetMapping = Mapping{Name: genRandomString(), Location: genRandomString()}
+					targetMapping = genTestMapping()
 					AddMapping(targetMapping)
 				})
 
@@ -264,7 +257,7 @@ var _ = Describe("Store", func() {
 				const numMappings = 250
 				BeforeEach(func() {
 					for i := 0; i < numMappings; i++ {
-						toAdd := Mapping{Name: genRandomString(), Location: genRandomString()}
+						toAdd := genTestMapping()
 						err = AddMapping(toAdd)
 						Expect(err).NotTo(HaveOccurred())
 						targetMappings = append(targetMappings, toAdd)
@@ -302,7 +295,7 @@ var _ = Describe("Store", func() {
 
 			Context("For a mapping that is in the store", func() {
 				BeforeEach(func() {
-					targetMapping = Mapping{Name: genRandomString(), Location: genRandomString()}
+					targetMapping = genTestMapping()
 					err = AddMapping(targetMapping)
 					Expect(err).NotTo(HaveOccurred())
 				})
@@ -440,6 +433,55 @@ var _ = Describe("Store", func() {
 					size, err = Size()
 					Expect(err).NotTo(HaveOccurred())
 					Expect(size).To(Equal(0))
+				})
+			})
+		})
+
+		Describe("Getting the number of mappings", func() {
+			var returnedSize int
+			JustBeforeEach(func() {
+				returnedSize, err = Size()
+			})
+			Context("when there are no mappings", func() {
+				It("should not return an error", func() {
+					Expect(err).NotTo(HaveOccurred())
+				})
+
+				It("should return a size of 0", func() {
+					Expect(returnedSize).To(BeZero())
+				})
+			})
+
+			Context("with a single mapping", func() {
+				BeforeEach(func() {
+					err = AddMapping(genTestMapping())
+					Expect(err).NotTo(HaveOccurred())
+				})
+
+				It("should not return an error", func() {
+					Expect(err).NotTo(HaveOccurred())
+				})
+
+				It("should return a size of 1", func() {
+					Expect(returnedSize).To(Equal(1))
+				})
+			})
+
+			Context("with a bunch of mappings", func() {
+				const numMappings = 246
+				BeforeEach(func() {
+					for i := 0; i < numMappings; i++ {
+						err = AddMapping(genTestMapping())
+						Expect(err).NotTo(HaveOccurred())
+					}
+				})
+
+				It("should not return an error", func() {
+					Expect(err).NotTo(HaveOccurred())
+				})
+
+				It("should return the correct number of mappings", func() {
+					Expect(returnedSize).To(Equal(numMappings))
 				})
 			})
 		})

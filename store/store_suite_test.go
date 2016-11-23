@@ -73,11 +73,11 @@ func genRandomString() string {
 	for i := 0; i < length; i++ {
 		c := byte(rand.Int()) % (numDigits + (numLetters * 2))
 		switch {
-		case c < numDigits:
+		case c < numDigits: //add digit
 			ret = append(ret, c+digitOffset)
-		case c < numDigits+numLetters:
+		case c < numDigits+numLetters: //add uppercase letter
 			ret = append(ret, c+upperOffset-numDigits)
-		case c < numDigits+(numLetters*2):
+		default: //add lowercase letter
 			ret = append(ret, c+lowerOffset-(numLetters+numDigits))
 		}
 	}
