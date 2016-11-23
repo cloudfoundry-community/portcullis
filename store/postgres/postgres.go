@@ -2,6 +2,12 @@ package postgres
 
 //This package will register this store type with the store package when it is
 // imported (use an underscore import)
+//CONFIG:
+//  host:     (string) The hostname/ip address of the Postgres server
+//  port:			(int)    The port on which the postgres server is listening
+//  dbname:   (string) The name of the database to connect to
+//  username: (string) The name of the user to connect with
+//  password: (string) The password of the user specified with `username`
 
 import "fmt"
 import "github.com/cloudfoundry-community/portcullis/store"
@@ -11,15 +17,36 @@ import "github.com/cloudfoundry-community/portcullis/store"
 type Postgres struct {
 }
 
+type postgresConfig struct {
+	Host     string `yaml:"host"`
+	Port     int    `yaml:"port"`
+	DBName   string `yaml:"dbname"`
+	Username string `yaml:"username"`
+	Password string `yaml:"password"`
+}
+
+//If you're making a new schema, it needs to be added to the end of this array
+var schemas = [1]schema{v1{}}
+
 func init() {
 	store.RegisterStoreType("postgres", &Postgres{})
+}
+
+func (p *Postgres) putSchemaVersion(int) error {
+	//TODO
+	return fmt.Errorf("Not yet implemented")
+}
+
+func (p *Postgres) getSchemaVersion() (int, error) {
+	//TODO
+	return -1, fmt.Errorf("Not yet implemented")
 }
 
 //Initialize checks the existing schema in the connected database and sets up
 //the tables to store data in the up-to-date schema, updating and migrating as
 //necessary
 func (p *Postgres) Initialize(map[string]interface{}) error {
-	//TODO
+	//Read and validate the config
 	return fmt.Errorf("Not yet implemented")
 }
 
