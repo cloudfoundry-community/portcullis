@@ -2,6 +2,8 @@ package dummy
 
 //This package will register this store type with the store package when it is
 // imported (use an underscore import)
+//CONFIG:
+//  confirm: (boolean) true if this dummy should actually be initialized.
 
 import (
 	"fmt"
@@ -17,6 +19,10 @@ type Dummy struct {
 	initialized bool
 }
 
+type dummyConfig struct {
+	Confirm bool `yaml:"confirm"`
+}
+
 func init() {
 	store.RegisterStoreType("dummy", &Dummy{})
 }
@@ -26,10 +32,17 @@ func (d *Dummy) Initialize(conf map[string]interface{}) error {
 	if conf == nil {
 		return fmt.Errorf("Dummy store config is nil")
 	}
-	confirmed := conf["confirm"]
-	if c, ok := confirmed.(bool); !(ok && c) {
-		return fmt.Errorf("Dummy store config key `confirm` not set to true.")
+	if err := store.ErrIfMissingKeys(conf, "confirm"); err != nil {
+		return err
 	}
+
+	dummyConf := dummyConfig{}
+	store.ParseStoreConfig(conf, &dummyConf)
+
+	if !dummyConf.Confirm {
+		return fmt.Errorf("Dummy store config key `confirm` not set to true")
+	}
+
 	d.storage = map[string]store.Mapping{}
 	d.initialized = true
 	return nil
