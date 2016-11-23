@@ -46,7 +46,7 @@ var _ = BeforeSuite(func() {
 	}
 	var c config.Config
 	c, err = config.Load(configPath)
-	Expect(err).To(HaveOccurred())
+	Expect(err).NotTo(HaveOccurred())
 	conf = c.Database
 
 	//Shut off the log messages

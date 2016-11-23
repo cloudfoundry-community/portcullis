@@ -483,6 +483,42 @@ var _ = Describe("Store", func() {
 				It("should return the correct number of mappings", func() {
 					Expect(returnedSize).To(Equal(numMappings))
 				})
+
+				Context("and then deleting some", func() {
+					const numToDelete = 42
+					BeforeEach(func() {
+						Expect(numToDelete < numMappings).To(BeTrue())
+						mapList, err := ListMappings()
+						Expect(err).NotTo(HaveOccurred())
+						for i := 0; i < numToDelete; i++ {
+							err = DeleteMapping(mapList[i].Name)
+							Expect(err).NotTo(HaveOccurred())
+						}
+					})
+
+					It("should not return an error", func() {
+						Expect(err).NotTo(HaveOccurred())
+					})
+
+					It("should return the correct number of mappings", func() {
+						Expect(returnedSize).To(Equal(numMappings - numToDelete))
+					})
+				})
+
+				Context("and then clearing all the mappings", func() {
+					BeforeEach(func() {
+						err = ClearMappings()
+						Expect(err).NotTo(HaveOccurred())
+					})
+
+					It("should not return an error", func() {
+						Expect(err).NotTo(HaveOccurred())
+					})
+
+					It("should return a size of 0", func() {
+						Expect(returnedSize).To(BeZero())
+					})
+				})
 			})
 		})
 	})
