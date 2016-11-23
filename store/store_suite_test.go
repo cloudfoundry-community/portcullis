@@ -46,7 +46,7 @@ var _ = BeforeSuite(func() {
 	}
 	var c config.Config
 	c, err = config.Load(configPath)
-	Expect(err).To(BeNil())
+	Expect(err).To(HaveOccurred())
 	conf = c.Database
 
 	//Shut off the log messages
@@ -54,9 +54,9 @@ var _ = BeforeSuite(func() {
 
 	//Initialize the database
 	err = store.SetStoreType(conf.Type)
-	Expect(err).To(BeNil())
+	Expect(err).NotTo(HaveOccurred())
 	err = store.Initialize(conf.Config)
-	Expect(err).To(BeNil())
+	Expect(err).NotTo(HaveOccurred())
 	//Make those pseudorandom strings more pseudorandom
 	rand.Seed(time.Now().UnixNano())
 })
