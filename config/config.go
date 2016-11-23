@@ -9,7 +9,7 @@ import (
 
 //Config is an in-memory representation of the configuration file for Portcullis
 type Config struct {
-	Database DatabaseConfig `yaml:"database"`
+	Store StoreConfig `yaml:"store"`
 }
 
 //Load creates and fills out a Config struct from the configuration file

@@ -1,4 +1,4 @@
-database:
+store:
   type: configtest
   config:
     dbname: test

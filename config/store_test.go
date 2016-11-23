@@ -12,16 +12,16 @@ var _ = Describe("Database", func() {
 		var path string
 		var err error
 		var conf Config
-		var dbconf DatabaseConfig
+		var dbconf StoreConfig
 
 		JustBeforeEach(func() {
 			conf, err = Load(path)
-			dbconf = conf.Database
+			dbconf = conf.Store
 		})
 
 		Context("a file with a database block in it", func() {
 			BeforeEach(func() {
-				path = confAssets("database.yml")
+				path = confAssets("store.yml")
 			})
 
 			It("should populate its members as expected", func() {

@@ -19,16 +19,15 @@ func main() {
 	configPath := os.Getenv("PORTCULLIS_CONFIG")
 
 	if configPath == "" {
-		log.Warnf("I'm a little %s", "teapot")
 		bailWith("Please define the configuration file location with the environment variable `PORTCULLIS_CONFIG`")
 	}
 
-	_, err := config.Load(configPath)
+	conf, err := config.Load(configPath)
 	if err != nil {
 		bailWith("Error while loading config:\n%s", err)
 	}
 
-	store.SetStoreType("dummy")
+	store.SetStoreType(conf.Store.Type)
 }
 
 func bailWith(mess string, args ...interface{}) {
