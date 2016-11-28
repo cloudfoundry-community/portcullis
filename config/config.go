@@ -10,7 +10,7 @@ import (
 //Config is an in-memory representation of the configuration file for Portcullis
 type Config struct {
 	Store StoreConfig `yaml:"store"`
-	Auth  AuthConfig  `yaml:"auth"`
+	API   APIConfig   `yaml:"auth"`
 }
 
 //Load creates and fills out a Config struct from the configuration file
