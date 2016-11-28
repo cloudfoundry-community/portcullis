@@ -28,6 +28,7 @@ func main() {
 	}
 
 	store.SetStoreType(conf.Store.Type)
+	store.Initialize(conf.Store.Config)
 }
 
 func bailWith(mess string, args ...interface{}) {

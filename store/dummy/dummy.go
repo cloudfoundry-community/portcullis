@@ -8,12 +8,14 @@ package dummy
 import (
 	"fmt"
 
+	"github.com/cloudfoundry-community/portcullis/config"
 	"github.com/cloudfoundry-community/portcullis/store"
 )
 
 //Dummy is an in-memory store that is used for testing and probably shouldn't
 // be used in any real circumstances, unless you really don't care about your
 // data or its persistence.
+//TODO: Might want to mutex these calls at some point. Stretchiest of goals.
 type Dummy struct {
 	storage     map[string]store.Mapping
 	initialized bool
@@ -32,12 +34,12 @@ func (d *Dummy) Initialize(conf map[string]interface{}) error {
 	if conf == nil {
 		return fmt.Errorf("Dummy store config is nil")
 	}
-	if err := store.ErrIfMissingKeys(conf, "confirm"); err != nil {
+	if err := config.ErrIfMissingKeys(config.StoreKey, conf, "confirm"); err != nil {
 		return err
 	}
 
 	dummyConf := dummyConfig{}
-	store.ParseStoreConfig(conf, &dummyConf)
+	config.ParseStoreConfig(config.StoreKey, conf, &dummyConf)
 
 	if !dummyConf.Confirm {
 		return fmt.Errorf("Dummy store config key `confirm` not set to true")
@@ -93,15 +95,16 @@ func (d *Dummy) AddMapping(m store.Mapping) error {
 //EditMapping edits an existing mapping with the same name as the one in the
 // provided store.Mapping object. The resulting mapping in the store will have
 // all the same values as the one in the provided store.Mapping
-func (d *Dummy) EditMapping(m store.Mapping) error {
+func (d *Dummy) EditMapping(name string, m store.Mapping) error {
 	if !d.initialized {
 		return fmt.Errorf("Dummy not initialized")
 	}
 
-	if _, err := d.GetMapping(m.Name); err != nil {
+	if _, err := d.GetMapping(name); err != nil {
 		return store.ErrNotFound
 	}
 
+	delete(d.storage, name)
 	d.storage[m.Name] = m
 	return nil
 }

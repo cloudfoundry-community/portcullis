@@ -25,10 +25,10 @@ type Store interface {
 	//AddMapping should put a new mapping into the store, and return ErrDuplicate if
 	//a mapping with that name already exists in the store
 	AddMapping(Mapping) error
-	//EditMapping should edit the mapping with the name in the given Mapping to
+	//EditMapping should edit the mapping with the provided name to
 	//have all the values in the given Mapping. Should return ErrNotFound if there
 	//is no mapping in the store with the name in the given Mapping
-	EditMapping(Mapping) error
+	EditMapping(string, Mapping) error
 	//DeleteMapping should remove an existing mapping from the store, and return
 	//ErrNotFound if the Mapping to remove did not exist in the store
 	DeleteMapping(string) error
@@ -92,8 +92,8 @@ func AddMapping(m Mapping) error {
 //EditMapping edits the mapping with the name in the given Mapping to
 //have all the values in the given Mapping. Should return ErrNotFound if there
 //is no mapping in the store with the name in the given Mapping
-func EditMapping(m Mapping) error {
-	return activeStore.EditMapping(m)
+func EditMapping(name string, m Mapping) error {
+	return activeStore.EditMapping(name, m)
 }
 
 //DeleteMapping removes an existing mapping from the store, and return

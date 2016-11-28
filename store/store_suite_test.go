@@ -21,7 +21,7 @@ import (
 	"github.com/starkandwayne/goutils/log"
 )
 
-var conf config.DatabaseConfig
+var conf config.StoreConfig
 
 func TestStore(t *testing.T) {
 	RegisterFailHandler(Fail)
@@ -47,7 +47,7 @@ var _ = BeforeSuite(func() {
 	var c config.Config
 	c, err = config.Load(configPath)
 	Expect(err).NotTo(HaveOccurred())
-	conf = c.Database
+	conf = c.Store
 
 	//Shut off the log messages
 	log.SetupLogging(log.LogConfig{Type: "console", Level: "emerg"})

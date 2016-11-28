@@ -339,9 +339,10 @@ var _ = Describe("Store", func() {
 		})
 
 		Describe("Editing mappings", func() {
+			var targetName string
 			var editedMapping Mapping
 			JustBeforeEach(func() {
-				err = EditMapping(editedMapping)
+				err = EditMapping(targetName, editedMapping)
 			})
 
 			Context("on a mapping that already exists", func() {
@@ -352,6 +353,7 @@ var _ = Describe("Store", func() {
 					err = AddMapping(origMapping)
 					Expect(err).NotTo(HaveOccurred())
 					editedMapping = genTestMapping().WithName(origMapping.Name)
+					targetName = origMapping.Name
 				})
 
 				It("should not return an error", func() {
@@ -383,7 +385,7 @@ var _ = Describe("Store", func() {
 
 				Context("and then editing it back", func() {
 					BeforeEach(func() {
-						err = EditMapping(origMapping)
+						err = EditMapping(targetName, origMapping)
 					})
 					It("should not return an error", func() {
 						Expect(err).NotTo(HaveOccurred())

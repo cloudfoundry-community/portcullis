@@ -32,7 +32,7 @@ func init() {
 	store.RegisterStoreType("postgres", &Postgres{})
 }
 
-func (p *Postgres) putSchemaVersion(int) error {
+func (p *Postgres) putSchemaVersion(version int) error {
 	//TODO
 	return fmt.Errorf("Not yet implemented")
 }
@@ -45,7 +45,7 @@ func (p *Postgres) getSchemaVersion() (int, error) {
 //Initialize checks the existing schema in the connected database and sets up
 //the tables to store data in the up-to-date schema, updating and migrating as
 //necessary
-func (p *Postgres) Initialize(map[string]interface{}) error {
+func (p *Postgres) Initialize(conf map[string]interface{}) error {
 	//Read and validate the config
 	return fmt.Errorf("Not yet implemented")
 }
@@ -65,7 +65,7 @@ func (p *Postgres) GetMapping(name string) (store.Mapping, error) {
 
 //AddMapping stores a new mapping in a row in the Postgres database
 //Will return an error if a mapping with that name already exists in the db
-func (p *Postgres) AddMapping(store.Mapping) error {
+func (p *Postgres) AddMapping(m store.Mapping) error {
 	//TODO
 	return fmt.Errorf("Not yet implemented")
 }
@@ -73,7 +73,7 @@ func (p *Postgres) AddMapping(store.Mapping) error {
 //EditMapping changes an existing entry for a Mapping with the same name as the
 // in the Postgres database as the provided Mapping to have the same data as in
 // the provided mapping. Errs if no mapping with that name exists in the database
-func (p *Postgres) EditMapping(store.Mapping) error {
+func (p *Postgres) EditMapping(name string, m store.Mapping) error {
 	//TODO
 	return fmt.Errorf("Not yet implemented")
 }
