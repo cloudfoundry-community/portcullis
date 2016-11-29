@@ -68,6 +68,7 @@ func SetStoreType(variant string) (err error) {
 // Most store implementation will likely expect a "port", "location", "username",
 // "password", and "dbname".
 func Initialize(config map[string]interface{}) error {
+	log.Infof("Initializing store")
 	return activeStore.Initialize(config)
 }
 

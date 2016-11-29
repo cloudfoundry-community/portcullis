@@ -39,7 +39,7 @@ func (d *Dummy) Initialize(conf map[string]interface{}) error {
 	}
 
 	dummyConf := dummyConfig{}
-	config.ParseStoreConfig(config.StoreKey, conf, &dummyConf)
+	config.ParseMapConfig(config.StoreKey, conf, &dummyConf)
 
 	if !dummyConf.Confirm {
 		return fmt.Errorf("Dummy store config key `confirm` not set to true")

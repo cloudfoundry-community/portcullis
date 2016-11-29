@@ -33,10 +33,10 @@ func ErrIfMissingKeys(confkey string, config map[string]interface{}, keys ...str
 	return err
 }
 
-//ParseStoreConfig takes the config for a store and unmarshals it into the
+//ParseMapConfig takes the config for a store and unmarshals it into the
 // given interface. Useful for taking the arbitrary map in the default
 // configuration object and making it into a store-specific struct.
-func ParseStoreConfig(confkey string, conf map[string]interface{}, confStruct interface{}) error {
+func ParseMapConfig(confkey string, conf map[string]interface{}, confStruct interface{}) error {
 	validateConfKey(confkey)
 
 	yamlConf, err := yaml.Marshal(conf)

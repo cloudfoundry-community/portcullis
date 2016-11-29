@@ -3,6 +3,7 @@ package main
 import (
 	"os"
 
+	"github.com/cloudfoundry-community/portcullis/api"
 	"github.com/cloudfoundry-community/portcullis/config"
 	"github.com/cloudfoundry-community/portcullis/store"
 	"github.com/starkandwayne/goutils/log"
@@ -24,11 +25,18 @@ func main() {
 
 	conf, err := config.Load(configPath)
 	if err != nil {
-		bailWith("Error while loading config:\n%s", err)
+		bailWith("Error while loading config: %s", err)
 	}
 
-	store.SetStoreType(conf.Store.Type)
+	err = store.SetStoreType(conf.Store.Type)
+	if err != nil {
+		bailWith("Error while setting store type: %s", err)
+	}
 	store.Initialize(conf.Store.Config)
+	if err != nil {
+		bailWith("Error while initializing store: %s", err)
+	}
+	api.Initialize(conf.API)
 }
 
 func bailWith(mess string, args ...interface{}) {

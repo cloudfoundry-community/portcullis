@@ -1,0 +1,8 @@
+store:
+  type: dummy
+  config:
+    confirm: true
+api:
+  port: 9824
+  auth:
+    type: none
