@@ -36,7 +36,16 @@ func main() {
 	if err != nil {
 		bailWith("Error while initializing store: %s", err)
 	}
-	api.Initialize(conf.API)
+	err = api.Initialize(conf.API)
+	if err != nil {
+		bailWith("Error while initializing API server: %s", err)
+	}
+	apiChan := make(chan error)
+	go api.Launch(apiChan)
+	select {
+	case err := <-apiChan:
+		bailWith("API Server closed with error: %s", err)
+	}
 }
 
 func bailWith(mess string, args ...interface{}) {

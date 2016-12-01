@@ -34,7 +34,7 @@ func (d *Dummy) Initialize(conf map[string]interface{}) error {
 	if conf == nil {
 		return fmt.Errorf("Dummy store config is nil")
 	}
-	if err := config.ErrIfMissingKeys(config.StoreKey, conf, "confirm"); err != nil {
+	if err := config.ValidateConfigKeys(config.StoreKey, conf, "confirm"); err != nil {
 		return err
 	}
 
