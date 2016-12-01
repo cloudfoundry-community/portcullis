@@ -1,9 +1,7 @@
 package api
 
 import (
-	"encoding/base64"
 	"net/http"
-	"strings"
 
 	"github.com/starkandwayne/goutils/log"
 )
@@ -47,33 +45,20 @@ type BasicAuth struct {
 //       API credentials
 func (b *BasicAuth) Auth(h http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, request *http.Request) {
-		//Is there an auth header?
-		if len(request.Header[`Authorization`]) == 0 {
-			log.Noticef("basicAuth: Authorization Required")
-			http.Error(w, "Authorization Required\n", http.StatusUnauthorized)
-			return
-		}
-
-		//Is the Auth header properly formatted, and is it for basic auth?
-		auth := strings.SplitN(request.Header[`Authorization`][0], " ", 2)
-		if len(auth) != 2 || auth[0] != `Basic` {
-			log.Errorf("basicAuth: Unhandled Authorization Type, Expected Basic")
-			http.Error(w, "Unhandled Authorization Type, Expected Basic\n", http.StatusBadRequest)
-			return
-		}
-
-		//Basic auth should be in base64 encoding, so gotta decode it
-		payload, err := base64.StdEncoding.DecodeString(auth[1])
-		if err != nil {
-			log.Errorf("basicAuth: Authorization Failed (Decoding)")
-			http.Error(w, "Authorization Failed (Decoding)\n", http.StatusUnauthorized)
+		//Get basic auth if its there
+		reqUser, reqPass, isBasicAuth := request.BasicAuth()
+		if !isBasicAuth {
+			log.Infof("basicAuth: Authorization Failed: No Basic Auth Header")
+			w.Header().Set("WWW-Authenticate", "Basic realm=\"Portcullis API\"")
+			log.Debugf("WWW-Authenticate Length: %d", len(w.Header().Get("WWW-Authenticate")))
+			w.WriteHeader(http.StatusUnauthorized)
+			w.Write([]byte("Authentication Required\n"))
 			return
 		}
 
 		//Check the provided auth creds to see if they are what we should allow
-		nv := strings.SplitN(string(payload), ":", 2)
-		if (len(nv) != 2) || !b.isAuthorized(nv[0], nv[1]) {
-			log.Errorf("basicAuth: Authorization Failed: Incorrect credentials")
+		if !b.isAuthorized(reqUser, reqPass) {
+			log.Warnf("basicAuth: Authorization Failed: Incorrect credentials")
 			http.Error(w, "Authorization Failed\n", http.StatusUnauthorized)
 			return
 		}
