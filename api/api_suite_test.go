@@ -20,4 +20,5 @@ func TestApi(t *testing.T) {
 var _ = BeforeSuite(func() {
 	//Squelch the logging
 	log.SetupLogging(log.LogConfig{Type: "console", Level: "emerg"})
+	//log.SetupLogging(log.LogConfig{Type: "console", Level: "debug"})
 })
