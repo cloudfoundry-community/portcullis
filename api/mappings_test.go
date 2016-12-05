@@ -68,10 +68,28 @@ var _ = Describe("Mappings", func() {
 		}
 	}
 
+	var getMetaStatus = func() string {
+		status, ok := unmarshalledResponse["meta"].(map[string]interface{})["status"].(string)
+		Expect(ok).To(BeTrue())
+		return status
+	}
+
 	Describe("GetMappings", func() {
 		BeforeEach(func() {
 			testHandler = GetMappings
 		})
+
+		var getContentsCount = func() int {
+			tmpFloat, ok := unmarshalledResponse["contents"].(map[string]interface{})["count"].(float64)
+			Expect(ok).To(BeTrue())
+			return int(tmpFloat)
+		}
+
+		var getContentsMappings = func() []interface{} {
+			mappings, ok := unmarshalledResponse["contents"].(map[string]interface{})["mappings"].([]interface{})
+			Expect(ok).To(BeTrue())
+			return mappings
+		}
 
 		Context("For all the mappings", func() {
 			BeforeEach(func() {
@@ -84,15 +102,15 @@ var _ = Describe("Mappings", func() {
 				})
 
 				It("should have a meta status of okay", func() {
-					Expect(unmarshalledResponse["meta"].(map[string]interface{})["status"]).To(Equal("OK"))
+					Expect(getMetaStatus()).To(Equal("OK"))
 				})
 
 				It("should have a contents with a count of 0", func() {
-					Expect(unmarshalledResponse["contents"].(map[string]interface{})["count"]).To(Equal(0))
+					Expect(getContentsCount()).To(Equal(0))
 				})
 
 				It("should have an empty mappings list", func() {
-					Expect(unmarshalledResponse["contents"].(map[string]interface{})["mappings"].([]interface{})).To(HaveLen(0))
+					Expect(getContentsMappings()).To(HaveLen(0))
 				})
 			})
 
@@ -108,21 +126,19 @@ var _ = Describe("Mappings", func() {
 				})
 
 				It("should have a meta status of okay", func() {
-					Expect(unmarshalledResponse["meta"].(map[string]interface{})["status"]).To(Equal("OK"))
+					Expect(getMetaStatus()).To(Equal("OK"))
 				})
 
 				It("should have a contents with a count of 1", func() {
-					Expect(unmarshalledResponse["contents"].(map[string]interface{})["count"]).To(Equal(1))
+					Expect(getContentsCount()).To(Equal(1))
 				})
 
 				It("should have a single item in the mappings list", func() {
-					Expect(unmarshalledResponse["contents"].(map[string]interface{})["mappings"].([]interface{})).To(HaveLen(1))
+					Expect(getContentsMappings()).To(HaveLen(1))
 				})
 
 				Specify("the mappings list should have the inserted mapping", func() {
-					theseMappings, ok := unmarshalledResponse["contents"].(map[string]interface{})["mappings"].([]interface{})
-					Expect(ok).To(BeTrue())
-					assertAllMappings(theseMappings, testMapping)
+					assertAllMappings(getContentsMappings(), testMapping)
 				})
 
 			})
@@ -147,21 +163,19 @@ var _ = Describe("Mappings", func() {
 				})
 
 				It("should have a meta status of okay", func() {
-					Expect(unmarshalledResponse["meta"].(map[string]interface{})["status"]).To(Equal("OK"))
+					Expect(getMetaStatus()).To(Equal("OK"))
 				})
 
 				It("should have a contents with a count of 1", func() {
-					Expect(unmarshalledResponse["contents"].(map[string]interface{})["count"]).To(Equal(numMappings))
+					Expect(getContentsCount()).To(Equal(numMappings))
 				})
 
 				It("should have a single item in the mappings list", func() {
-					Expect(unmarshalledResponse["contents"].(map[string]interface{})["mappings"].([]interface{})).To(HaveLen(numMappings))
+					Expect(getContentsMappings()).To(HaveLen(numMappings))
 				})
 
 				Specify("the mappings list should have the inserted mapping", func() {
-					theseMappings, ok := unmarshalledResponse["contents"].(map[string]interface{})["mappings"].([]interface{})
-					Expect(ok).To(BeTrue())
-					assertAllMappings(theseMappings, testMappings...)
+					assertAllMappings(getContentsMappings(), testMappings...)
 				})
 			})
 
@@ -176,15 +190,15 @@ var _ = Describe("Mappings", func() {
 				})
 
 				It("should have a meta status of OK", func() {
-					Expect(unmarshalledResponse["meta"].(map[string]interface{})["status"]).To(Equal("OK"))
+					Expect(getMetaStatus()).To(Equal("OK"))
 				})
 
 				It("should have a contents list with a count of 1", func() {
-					Expect(unmarshalledResponse["contents"].(map[string]interface{})["count"]).To(Equal(1))
+					Expect(getContentsCount()).To(Equal(1))
 				})
 
 				Specify("the contents should have the queried mappings", func() {
-					assertAllMappings(unmarshalledResponse["contents"].(map[string]interface{})["mappings"].([]interface{}), targetMapping)
+					assertAllMappings(getContentsMappings())
 				})
 			}
 
@@ -194,7 +208,7 @@ var _ = Describe("Mappings", func() {
 				})
 
 				It("should have a meta status of error", func() {
-					Expect(unmarshalledResponse["meta"].(map[string]interface{})["status"]).To(Equal("error"))
+					Expect(getMetaStatus()).To(Equal("error"))
 				})
 
 				It("should not have a contents section", func() {
