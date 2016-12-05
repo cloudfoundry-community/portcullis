@@ -9,6 +9,8 @@ import (
 //Authorizer must define the function Auth, which takes a HandlerFunc, and returns
 // a HandlerFunc which performs the authorization specified by the implementation,
 // and then calls the provided HandlerFunc if authorization was deemed successful
+// Auth should set the Content-Type header to "application/json" before forwarding
+// to the mapped function
 type Authorizer interface {
 	Auth(http.HandlerFunc) http.HandlerFunc
 }
@@ -22,6 +24,7 @@ type NopAuth struct {
 //Auth does nothing, and then calls the provided HandlerFunc
 func (n *NopAuth) Auth(h http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, request *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
 		h(w, request)
 	}
 }
@@ -45,21 +48,33 @@ type BasicAuth struct {
 //       API credentials
 func (b *BasicAuth) Auth(h http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, request *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
 		//Get basic auth if its there
 		reqUser, reqPass, isBasicAuth := request.BasicAuth()
 		if !isBasicAuth {
 			log.Infof("basicAuth: Authorization Failed: No Basic Auth Header")
 			w.Header().Set("WWW-Authenticate", "Basic realm=\"Portcullis API\"")
 			log.Debugf("WWW-Authenticate Length: %d", len(w.Header().Get("WWW-Authenticate")))
+			body, err := responsify(MetaUnauthorized, nil)
+			if err != nil {
+				w.WriteHeader(http.StatusInternalServerError)
+				return
+			}
 			w.WriteHeader(http.StatusUnauthorized)
-			w.Write([]byte("Authentication Required\n"))
+			w.Write(body)
 			return
 		}
 
 		//Check the provided auth creds to see if they are what we should allow
 		if !b.isAuthorized(reqUser, reqPass) {
 			log.Warnf("basicAuth: Authorization Failed: Incorrect credentials")
-			http.Error(w, "Authorization Failed\n", http.StatusUnauthorized)
+			body, err := responsify(MetaUnauthorized, nil)
+			if err != nil {
+				http.Error(w, "", http.StatusInternalServerError)
+				return
+			}
+			w.WriteHeader(http.StatusUnauthorized)
+			w.Write(body)
 			return
 		}
 		h(w, request)
