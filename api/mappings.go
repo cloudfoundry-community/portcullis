@@ -1,6 +1,40 @@
 package api
 
-import "net/http"
+import (
+	"encoding/json"
+	"fmt"
+	"net/http"
+
+	"github.com/cloudfoundry-community/portcullis/store"
+	"github.com/gorilla/mux"
+)
+
+//GetMappingsResponse contains the information to be written to the body in
+// response to a call to the GetMappings handler, to be marshalled to JSON.
+type GetMappingsResponse struct {
+	//Count should be set to the length of the Mappings slice
+	Count int `json:"count"`
+	//Mappings should contain the mappings in the store fitting the query parameters
+	Mappings store.MappingList `json:"mappings"`
+	//NameFilter is the name of the mapping that was specified to search for, if present
+	NameFilter string `json:"name_filter"`
+	//FilterByName should be true if NameFilter was used to find a specific mapping
+	// and false otherwise
+	FilterByName bool `json:"filter_by_name"`
+}
+
+func genUnmarshalError() []byte {
+	ret, err := json.Marshal(HandlerResponse{
+		Meta: Metadata{
+			Status:  MetaError,
+			Message: MetaMessageAPIBug,
+		},
+	})
+	if err != nil { //Please, no
+		panic("Couldn't even unmarshal an error to talk about an unmarshal error")
+	}
+	return ret
+}
 
 //GetMappings is an HTTP handler that returns mapping objects in the store as
 // JSON objects. If the URI has an additional branch with the name of a mapping,
@@ -11,7 +45,81 @@ import "net/http"
 // 404 - A specific mapping was specified but could not be found in the store.
 // 500 - Internal error - i.e Store cannot be reached
 func GetMappings(w http.ResponseWriter, r *http.Request) {
-	//TODO
+	var name string
+	var err error
+	if varName, nameSpecified := mux.Vars(r)["name"]; nameSpecified {
+		name = varName
+	}
+	respStruct, returnCode := getMappingsHelper(name)
+	w.WriteHeader(returnCode)
+	var respBody []byte
+	if respBody, err = json.Marshal(respStruct); err != nil {
+		respBody = genUnmarshalError()
+	}
+	w.Write(respBody)
+	return
+}
+
+func getMappingsHelper(name string) (respStruct *HandlerResponse, returnCode int) {
+	if name != "" { //Getting a specific mapping
+		return getSpecificMappingHelper(name)
+	}
+	return getAllMappingsHelper()
+}
+
+func getSpecificMappingHelper(name string) (respStruct *HandlerResponse, returnCode int) {
+	respStruct = &HandlerResponse{} //If this is nil, it won't be Marshalled into the response
+	searchedMapping, err := store.GetMapping(name)
+	//Check for errors all the errors
+	if err != nil {
+		if err == store.ErrNotFound { //The mapping doesn't exist
+			returnCode = http.StatusNotFound
+			respStruct.Meta = Metadata{
+				Status:  MetaError,
+				Message: fmt.Sprintf("No mapping exists with name `%s`", name),
+			}
+			return
+		}
+		//Unexpected store error
+		returnCode = http.StatusInternalServerError
+		respStruct.Meta = Metadata{
+			Status:  MetaError,
+			Message: MetaMessageStoreError,
+		}
+		return
+	}
+	//Okay, no errors. Construct a successful response
+	returnCode = http.StatusOK
+	respStruct.Meta = Metadata{Status: MetaOK}
+	respStruct.Contents = GetMappingsResponse{
+		Count:        1,
+		Mappings:     store.MappingList{searchedMapping},
+		NameFilter:   name,
+		FilterByName: true,
+	}
+	return
+}
+
+func getAllMappingsHelper() (respStruct *HandlerResponse, returnCode int) {
+	respStruct = &HandlerResponse{}
+	mappings, err := store.ListMappings()
+	if err != nil { //Something went wrong when talking to the store
+		returnCode = http.StatusInternalServerError
+		respStruct.Meta = Metadata{
+			Status:  MetaError,
+			Message: MetaMessageStoreError,
+		}
+		return
+	}
+	//Okay, so no error
+	returnCode = http.StatusOK
+	respStruct.Meta = Metadata{Status: MetaOK}
+	respStruct.Contents = GetMappingsResponse{
+		Count:        len(mappings),
+		Mappings:     mappings,
+		FilterByName: false,
+	}
+	return
 }
 
 //CreateMapping is an HTTP handler that creates a new mapping in the store from

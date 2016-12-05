@@ -1,9 +1,15 @@
 package api
 
-import "github.com/cloudfoundry-community/portcullis/config"
-import "fmt"
+import (
+	"encoding/json"
+	"fmt"
+
+	"github.com/cloudfoundry-community/portcullis/config"
+	"github.com/gorilla/mux"
+)
+
 import "github.com/starkandwayne/goutils/log"
-import "github.com/gorilla/mux"
+
 import "net/http"
 
 var (
@@ -84,5 +90,52 @@ func Launch(e chan<- error) {
 	log.Infof("Listening on port %d", port)
 	e <- http.ListenAndServe(fmt.Sprintf(":%d", port), router)
 
+	return
+}
+
+//HandlerResponse encapsulates the information to be put in a response body so
+// that it may be marshalled into JSON at a later time.
+type HandlerResponse struct {
+	Meta     Metadata    `json:"meta"`
+	Contents interface{} `json:"contents,omitempty"` //Handler specific data goes here
+}
+
+//Metadata contains stuff that any API call could/should return in the response body,
+// pertaining to the request in general
+type Metadata struct {
+	//Status is a regulated string for how things went. See the predefined constants
+	Status  string `json:"status"`
+	Message string `json:"message,omitempty"`
+}
+
+//Status strings for responsify
+const (
+	MetaOK           = "OK"
+	MetaUnauthorized = "Unauthorized"
+	MetaError        = "Error"
+)
+
+//Pre-cooked error messages
+const (
+	MetaMessageStoreError = "Encountered an error while contacting the storage backend"
+	MetaMessageAPIBug     = "A bug has occurred in the Portcullis API"
+)
+
+//Makes a `meta` field declaring the provided status and message (if
+//provided). Puts your provided interface in a `contents` field. JSONifies all
+// of it, and then returns the resulting byte array. Errs if something goes
+// wrong with the JSON marshalling
+func responsify(status string, contents interface{}, message ...string) (resp []byte, err error) {
+	responseData := HandlerResponse{
+		Meta: Metadata{
+			Status: status,
+		},
+		Contents: contents,
+	}
+	if len(message) > 0 {
+		responseData.Meta.Message = message[0]
+	}
+
+	resp, err = json.Marshal(responseData)
 	return
 }
