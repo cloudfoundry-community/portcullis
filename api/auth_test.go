@@ -94,7 +94,7 @@ var _ = Describe("Auth", func() {
 			respStr := HandlerResponse{}
 			err = json.Unmarshal([]byte(testResponse.Body.String()), &respStr)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(respStr.Meta.Status).To(Equal(MetaUnauthorized))
+			Expect(respStr.Meta.Status).To(Equal(MetaStatusUnauthorized))
 		})
 
 		It("should have a Content-Type of application/json", func() {

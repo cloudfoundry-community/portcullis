@@ -1,7 +1,6 @@
 package api
 
 import (
-	"encoding/json"
 	"fmt"
 	"net/http"
 
@@ -23,19 +22,6 @@ type GetMappingsResponse struct {
 	FilterByName bool `json:"filter_by_name"`
 }
 
-func genUnmarshalError() []byte {
-	ret, err := json.Marshal(HandlerResponse{
-		Meta: Metadata{
-			Status:  MetaError,
-			Message: MetaMessageAPIBug,
-		},
-	})
-	if err != nil { //Please, no
-		panic("Couldn't even unmarshal an error to talk about an unmarshal error")
-	}
-	return ret
-}
-
 //GetMappings is an HTTP handler that returns mapping objects in the store as
 // JSON objects. If the URI has an additional branch with the name of a mapping,
 // only that mapping will be returned.
@@ -50,76 +36,57 @@ func GetMappings(w http.ResponseWriter, r *http.Request) {
 	if varName, nameSpecified := mux.Vars(r)["name"]; nameSpecified {
 		name = varName
 	}
-	respStruct, returnCode := getMappingsHelper(name)
+	returnCode, message, contents := getMappingsHelper(name)
 	w.WriteHeader(returnCode)
-	var respBody []byte
-	if respBody, err = json.Marshal(respStruct); err != nil {
-		respBody = genUnmarshalError()
+	respBody, err := responsify(returnCode, contents, message)
+	if err != nil {
+		panic("Couldn't unmarshal response struct in GetMappings")
 	}
 	w.Write(respBody)
 	return
 }
 
-func getMappingsHelper(name string) (respStruct *HandlerResponse, returnCode int) {
+func getMappingsHelper(name string) (returnCode int, message string, contents interface{}) {
 	if name != "" { //Getting a specific mapping
 		return getSpecificMappingHelper(name)
 	}
 	return getAllMappingsHelper()
 }
 
-func getSpecificMappingHelper(name string) (respStruct *HandlerResponse, returnCode int) {
-	respStruct = &HandlerResponse{} //If this is nil, it won't be Marshalled into the response
+func getSpecificMappingHelper(name string) (returnCode int, message string, contents interface{}) {
 	searchedMapping, err := store.GetMapping(name)
 	//Check for errors all the errors
 	if err != nil {
 		if err == store.ErrNotFound { //The mapping doesn't exist
-			returnCode = http.StatusNotFound
-			respStruct.Meta = Metadata{
-				Status:  MetaError,
-				Message: fmt.Sprintf("No mapping exists with name `%s`", name),
-			}
-			return
+			return http.StatusNotFound, fmt.Sprintf("No mapping in store with name: `%s`", name), nil
 		}
 		//Unexpected store error
-		returnCode = http.StatusInternalServerError
-		respStruct.Meta = Metadata{
-			Status:  MetaError,
-			Message: MetaMessageStoreError,
-		}
-		return
+		return http.StatusInternalServerError, MetaMessageStoreError, nil
 	}
 	//Okay, no errors. Construct a successful response
 	returnCode = http.StatusOK
-	respStruct.Meta = Metadata{Status: MetaOK}
-	respStruct.Contents = GetMappingsResponse{
+	contents = GetMappingsResponse{
 		Count:        1,
 		Mappings:     store.MappingList{searchedMapping},
 		NameFilter:   name,
 		FilterByName: true,
 	}
-	return
+	return http.StatusOK, "", contents
 }
 
-func getAllMappingsHelper() (respStruct *HandlerResponse, returnCode int) {
-	respStruct = &HandlerResponse{}
+func getAllMappingsHelper() (returnCode int, message string, contents interface{}) {
 	mappings, err := store.ListMappings()
 	if err != nil { //Something went wrong when talking to the store
-		returnCode = http.StatusInternalServerError
-		respStruct.Meta = Metadata{
-			Status:  MetaError,
-			Message: MetaMessageStoreError,
-		}
-		return
+		return http.StatusInternalServerError, MetaMessageStoreError, nil
 	}
 	//Okay, so no error
 	returnCode = http.StatusOK
-	respStruct.Meta = Metadata{Status: MetaOK}
-	respStruct.Contents = GetMappingsResponse{
+	contents = GetMappingsResponse{
 		Count:        len(mappings),
 		Mappings:     mappings,
 		FilterByName: false,
 	}
-	return
+	return http.StatusOK, "", contents
 }
 
 //CreateMapping is an HTTP handler that creates a new mapping in the store from

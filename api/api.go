@@ -110,9 +110,9 @@ type Metadata struct {
 
 //Status strings for responsify
 const (
-	MetaOK           = "OK"
-	MetaUnauthorized = "Unauthorized"
-	MetaError        = "Error"
+	MetaStatusOK           = "OK"
+	MetaStatusUnauthorized = "Unauthorized"
+	MetaStatusError        = "Error"
 )
 
 //Pre-cooked error messages
@@ -121,19 +121,30 @@ const (
 	MetaMessageAPIBug     = "A bug has occurred in the Portcullis API"
 )
 
-//Makes a `meta` field declaring the provided status and message (if
-//provided). Puts your provided interface in a `contents` field. JSONifies all
+//Makes a `meta` field declaring the status and (optionally provided) message.
+// Puts your provided interface in a `contents` field. JSONifies all
 // of it, and then returns the resulting byte array. Errs if something goes
 // wrong with the JSON marshalling
-func responsify(status string, contents interface{}, message ...string) (resp []byte, err error) {
+//Infers a status string from the provided HTTP Status Code. 200 is OK. 401 is
+// Unauthorized. Everything else is an error
+func responsify(statuscode int, contents interface{}, message string) (resp []byte, err error) {
+	var status string
+	switch statuscode {
+	case http.StatusOK:
+		status = MetaStatusOK
+	case http.StatusUnauthorized:
+		status = MetaStatusUnauthorized
+	default:
+		status = MetaStatusError
+	}
 	responseData := HandlerResponse{
 		Meta: Metadata{
 			Status: status,
 		},
 		Contents: contents,
 	}
-	if len(message) > 0 {
-		responseData.Meta.Message = message[0]
+	if message != "" {
+		responseData.Meta.Message = message
 	}
 
 	resp, err = json.Marshal(responseData)
