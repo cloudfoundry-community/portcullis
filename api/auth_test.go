@@ -9,6 +9,8 @@ import (
 
 	. "github.com/cloudfoundry-community/portcullis/api"
 
+	"encoding/json"
+
 	"github.com/cloudfoundry-community/portcullis/config"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -73,6 +75,10 @@ var _ = Describe("Auth", func() {
 		It("should have received the request body", func() {
 			Expect(testResponse.Body.String()).To(Equal(testBody))
 		})
+
+		It("should have a Content-Type of application/json", func() {
+			Expect(testResponse.Header().Get("Content-Type")).To(Equal("application/json"))
+		})
 	}
 
 	var testAuthRejection = func() {
@@ -82,6 +88,17 @@ var _ = Describe("Auth", func() {
 
 		It("should not run the request", func() {
 			Expect(successOccurred).To(BeFalse())
+		})
+
+		It("should return with a status message of Unauthorized", func() {
+			respStr := HandlerResponse{}
+			err = json.Unmarshal([]byte(testResponse.Body.String()), &respStr)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(respStr.Meta.Status).To(Equal(MetaUnauthorized))
+		})
+
+		It("should have a Content-Type of application/json", func() {
+			Expect(testResponse.Header().Get("Content-Type")).To(Equal("application/json"))
 		})
 	}
 
