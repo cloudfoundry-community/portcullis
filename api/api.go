@@ -60,6 +60,7 @@ func Initialize(conf config.APIConfig) (err error) {
 	s.HandleFunc("/mappings/{name}", auth.Auth(EditMapping)).Methods("PUT")
 
 	router = r
+	//TODO: Overwrite NotFoundHandler with responsify use
 	return
 }
 

@@ -58,8 +58,8 @@ var _ = Describe("Mappings", func() {
 	var assertAllMappings = func(container []interface{}, toFind ...store.Mapping) {
 		tmpjson, err := json.Marshal(container)
 		Expect(err).NotTo(HaveOccurred())
-		var asMappings store.MappingList
-		Expect(json.Unmarshal(tmpjson, asMappings)).To(Succeed())
+		var asMappings = store.MappingList{}
+		Expect(json.Unmarshal(tmpjson, &asMappings)).To(Succeed())
 		Expect(asMappings).To(HaveLen(len(container)))
 		sort.Sort(asMappings)
 		for _, m := range toFind {
@@ -208,7 +208,7 @@ var _ = Describe("Mappings", func() {
 				})
 
 				It("should have a meta status of error", func() {
-					Expect(getMetaStatus()).To(Equal("error"))
+					Expect(getMetaStatus()).To(Equal("Error"))
 				})
 
 				It("should not have a contents section", func() {
@@ -251,6 +251,14 @@ var _ = Describe("Mappings", func() {
 					}
 				})
 				assertSpecificMappingSuccess()
+			})
+
+			Context("When the requested mappings name is an empty string", func() {
+				BeforeEach(func() {
+					targetMapping = store.Mapping{Name: "", Location: genRandomString()}
+				})
+
+				assertSpecificMappingFailure()
 			})
 		})
 	})
