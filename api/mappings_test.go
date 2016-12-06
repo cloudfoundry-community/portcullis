@@ -395,6 +395,25 @@ var _ = Describe("Mappings", func() {
 			})
 		})
 
+		Context("For a request with no body", func() {
+			BeforeEach(func() {
+				testRequest = httptest.NewRequest("POST", "/v1/mappings", nil)
+			})
+
+			It("should return a code of 400", func() {
+				Expect(testResponse.Code).To(Equal(http.StatusBadRequest))
+			})
+
+			It("should have a meta status of Error", func() {
+				Expect(getMetaStatus).To(Equal("Error"))
+			})
+
+			It("should not have a contents hash", func() {
+				_, found := unmarshalledResponse["contents"]
+				Expect(found).To(BeFalse())
+			})
+		})
+
 		Context("For a request body with no name field", func() {
 			BeforeEach(func() {
 				mapping := genTestMapping()
