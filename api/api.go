@@ -107,12 +107,14 @@ type Metadata struct {
 	//Status is a regulated string for how things went. See the predefined constants
 	Status  string `json:"status"`
 	Message string `json:"message,omitempty"`
+	Warning string `json:"warning,omitempty"`
 }
 
 //Status strings for responsify
 const (
 	MetaStatusOK           = "OK"
 	MetaStatusUnauthorized = "Unauthorized"
+	MetaStatusNotFound     = "Not Found"
 	MetaStatusError        = "Error"
 )
 
@@ -128,13 +130,18 @@ const (
 // wrong with the JSON marshalling
 //Infers a status string from the provided HTTP Status Code. 200 is OK. 401 is
 // Unauthorized. Everything else is an error
-func responsify(statuscode int, contents interface{}, message string) (resp []byte, err error) {
+func responsify(statuscode int, contents interface{}, message string, warning ...string) (resp []byte, err error) {
+	//^^This function signature is getting to be an unreadable mess. Consider refactoring later
+	//Probably to take Metadata and interface{} with another function to handle making Metadata,
+	// because thats most of what this does anyway
 	var status string
-	switch statuscode {
-	case http.StatusOK:
+	switch {
+	case statuscode/100 == 2:
 		status = MetaStatusOK
-	case http.StatusUnauthorized:
+	case statuscode == http.StatusUnauthorized || statuscode == http.StatusForbidden:
 		status = MetaStatusUnauthorized
+	case statuscode == http.StatusNotFound:
+		status = MetaStatusNotFound
 	default:
 		status = MetaStatusError
 	}
@@ -146,6 +153,9 @@ func responsify(statuscode int, contents interface{}, message string) (resp []by
 	}
 	if message != "" {
 		responseData.Meta.Message = message
+	}
+	if len(warning) > 0 {
+		responseData.Meta.Warning = warning[0]
 	}
 
 	resp, err = json.Marshal(responseData)

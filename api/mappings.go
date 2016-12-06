@@ -32,7 +32,6 @@ type GetMappingsResponse struct {
 // 500 - Internal error - i.e Store cannot be reached
 func GetMappings(w http.ResponseWriter, r *http.Request) {
 	var name string
-	var err error
 	if varName, nameSpecified := mux.Vars(r)["name"]; nameSpecified {
 		name = varName
 	}
@@ -95,8 +94,9 @@ func getAllMappingsHelper() (returnCode int, message string, contents interface{
 // present will be ignored but generate a warning.
 //
 //Return codes:
-// 200 - The mapping was successfully created
-// 400 - There is a missing key, or there is a key which violates a constraint
+// 201 - The mapping was successfully created
+// 400 - The JSON is invalid, there is a missing key, or there is a key which
+//       violates a constraint.
 // 409 - A mapping with this name already exists in the store
 // 500 - Internal error - i.e Store cannot be reached
 func CreateMapping(w http.ResponseWriter, r *http.Request) {
