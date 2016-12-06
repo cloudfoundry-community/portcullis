@@ -348,6 +348,8 @@ var _ = Describe("Mappings", func() {
 			var origMapping store.Mapping
 			BeforeEach(func() {
 				origMapping = genTestMapping()
+				err = store.AddMapping(origMapping)
+				Expect(err).NotTo(HaveOccurred())
 				newMapping := genTestMapping().WithName(origMapping.Name)
 				var j []byte
 				j, err = json.Marshal(newMapping)
@@ -405,7 +407,7 @@ var _ = Describe("Mappings", func() {
 			})
 
 			It("should have a meta status of Error", func() {
-				Expect(getMetaStatus).To(Equal("Error"))
+				Expect(getMetaStatus()).To(Equal("Error"))
 			})
 
 			It("should not have a contents hash", func() {
