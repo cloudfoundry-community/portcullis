@@ -86,6 +86,7 @@ func GetMapping(name string) (Mapping, error) {
 //AddMapping puts a new mapping into the store, and return ErrDuplicate if a
 // mapping with that name already exists in the store
 func AddMapping(m Mapping) error {
+	//TODO: Create and enforce restrictions on mapping fields
 	return activeStore.AddMapping(m)
 
 }

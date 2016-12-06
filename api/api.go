@@ -130,7 +130,7 @@ const (
 // wrong with the JSON marshalling
 //Infers a status string from the provided HTTP Status Code. 200 is OK. 401 is
 // Unauthorized. Everything else is an error
-func responsify(statuscode int, contents interface{}, message string, warning ...string) (resp []byte, err error) {
+func responsify(statuscode int, contents interface{}, message string, warning ...string) (resp []byte) {
 	//^^This function signature is getting to be an unreadable mess. Consider refactoring later
 	//Probably to take Metadata and interface{} with another function to handle making Metadata,
 	// because thats most of what this does anyway
@@ -157,7 +157,12 @@ func responsify(statuscode int, contents interface{}, message string, warning ..
 	if len(warning) > 0 {
 		responseData.Meta.Warning = warning[0]
 	}
-
+	var err error
 	resp, err = json.Marshal(responseData)
+	if err != nil {
+		//This API facing panic makes me uneasy. May switch to logging an error
+		// at a later time and returning a pre-baked response
+		panic("Could not marshal response in API")
+	}
 	return
 }

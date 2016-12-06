@@ -54,10 +54,7 @@ func (b *BasicAuth) Auth(h http.HandlerFunc) http.HandlerFunc {
 		if !isBasicAuth {
 			log.Infof("basicAuth: Authorization Failed: No Basic Auth Header")
 			w.Header().Set("WWW-Authenticate", "Basic realm=\"Portcullis API\"")
-			body, err := responsify(http.StatusUnauthorized, nil, "")
-			if err != nil {
-				panic("Couldn't unmarshal response struct in BasicAuth.Auth()")
-			}
+			body := responsify(http.StatusUnauthorized, nil, "")
 			w.WriteHeader(http.StatusUnauthorized)
 			w.Write(body)
 			return
@@ -66,10 +63,7 @@ func (b *BasicAuth) Auth(h http.HandlerFunc) http.HandlerFunc {
 		//Check the provided auth creds to see if they are what we should allow
 		if !b.isAuthorized(reqUser, reqPass) {
 			log.Warnf("basicAuth: Authorization Failed: Incorrect credentials")
-			body, err := responsify(http.StatusUnauthorized, nil, "")
-			if err != nil {
-				panic("Couldn't unmarshal response struct in BasicAuth.Auth() (2)")
-			}
+			body := responsify(http.StatusUnauthorized, nil, "")
 			w.WriteHeader(http.StatusUnauthorized)
 			w.Write(body)
 			return

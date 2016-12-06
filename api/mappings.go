@@ -2,7 +2,11 @@ package api
 
 import (
 	"fmt"
+	"io/ioutil"
 	"net/http"
+	"strings"
+
+	"encoding/json"
 
 	"github.com/cloudfoundry-community/portcullis/store"
 	"github.com/gorilla/mux"
@@ -37,10 +41,7 @@ func GetMappings(w http.ResponseWriter, r *http.Request) {
 	}
 	returnCode, message, contents := getMappingsHelper(name)
 	w.WriteHeader(returnCode)
-	respBody, err := responsify(returnCode, contents, message)
-	if err != nil {
-		panic("Couldn't unmarshal response struct in GetMappings")
-	}
+	respBody := responsify(returnCode, contents, message)
 	w.Write(respBody)
 	return
 }
@@ -101,6 +102,77 @@ func getAllMappingsHelper() (returnCode int, message string, contents interface{
 // 500 - Internal error - i.e Store cannot be reached
 func CreateMapping(w http.ResponseWriter, r *http.Request) {
 	//TODO
+	returnCode, message, warning := createMappingHelper(r)
+	var respBody []byte
+	if warning != "" {
+		respBody = responsify(returnCode, nil, message, warning)
+	} else {
+		respBody = responsify(returnCode, nil, message)
+	}
+	w.WriteHeader(returnCode)
+	w.Write(respBody)
+	return
+}
+
+func createMappingHelper(r *http.Request) (returnCode int, message, warning string) {
+	//First, read the request body into a string we can use
+	bodyBytes, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		return http.StatusInternalServerError, "An error was encountered while reading the request body", ""
+	}
+	//Make sure a request body was actually provided
+	if len(bodyBytes) == 0 {
+		return http.StatusBadRequest, "No request body was provided to the create call", ""
+	}
+	//Unmarshal the request body's JSON into a map we can validate with
+	var m map[string]interface{}
+	err = json.Unmarshal(bodyBytes, &m)
+	if err != nil {
+		return http.StatusBadRequest, "The provided JSON body could not be parsed", ""
+	}
+	//Check if there are any extraneous fields in the JSON body
+	var additionalFields []string
+	for k := range m {
+		if !isMappingField(k) {
+			additionalFields = append(additionalFields, k)
+		}
+	}
+	if len(additionalFields) > 0 {
+		warning = fmt.Sprintf("Extraneous fields in the provided JSON were ignored: `%s`", strings.Join(additionalFields, "`, `"))
+	}
+	//Validate that the provided body has the expected JSON fields
+	_, found := m["name"]
+	if !found {
+		return http.StatusBadRequest, "The provided JSON body did not have a `name` key", warning
+	}
+	_, found = m["location"]
+	if !found {
+		return http.StatusBadRequest, "The provided JSON body did not have a `location` key", warning
+	}
+	//Unmarshal into a mapping object we can add to the store
+	var mapping store.Mapping
+	err = json.Unmarshal(bodyBytes, &mapping)
+	if err != nil {
+		//If we could unmarshal into a map but not this struct, something is wrong programmatically
+		return http.StatusInternalServerError, "There was an error while parsing the JSON body", warning
+	}
+	err = store.AddMapping(mapping)
+	if err != nil {
+		if err == store.ErrDuplicate {
+			return http.StatusConflict,
+				fmt.Sprintf("There already exists a mapping in the store with the given name: `%s`", mapping.Name),
+				warning
+		}
+		//TODO: Another case will be needed here when mapping constraints are implemented
+		return http.StatusInternalServerError,
+			"Encountered an error while contacting the backend store",
+			warning
+	}
+	return http.StatusCreated, "", warning
+}
+
+func isMappingField(key string) bool {
+	return key == "name" || key == "location"
 }
 
 //EditMapping is an HTTP handler that edits the mapping with the name provided
