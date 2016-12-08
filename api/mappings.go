@@ -101,7 +101,6 @@ func getAllMappingsHelper() (returnCode int, message string, contents interface{
 // 409 - A mapping with this name already exists in the store
 // 500 - Internal error - i.e Store cannot be reached
 func CreateMapping(w http.ResponseWriter, r *http.Request) {
-	//TODO
 	returnCode, message, warning := createMappingHelper(r)
 	var respBody []byte
 	if warning != "" {
@@ -171,10 +170,6 @@ func createMappingHelper(r *http.Request) (returnCode int, message, warning stri
 	return http.StatusCreated, "", warning
 }
 
-func isMappingField(key string) bool {
-	return key == "name" || key == "location"
-}
-
 //EditMapping is an HTTP handler that edits the mapping with the name provided
 // in the URL to have the information provided by the JSON in the PUT request
 // body. Keys which are not present will retain their initial values. Extraneous
@@ -186,7 +181,88 @@ func isMappingField(key string) bool {
 // 404 - No mapping with that name exists.
 // 500 - Internal error - i.e. Store cannot be reached.
 func EditMapping(w http.ResponseWriter, r *http.Request) {
-	//TODO
+	name, found := mux.Vars(r)["name"]
+	if !found {
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write(responsify(http.StatusBadRequest, nil, "No name was provided to the edit call"))
+	}
+	returnCode, message, warning := editMappingHelper(name, r)
+	var respBody []byte
+	if warning != "" {
+		respBody = responsify(returnCode, nil, message, warning)
+	} else {
+		respBody = responsify(returnCode, nil, message)
+	}
+	w.WriteHeader(returnCode)
+	w.Write(respBody)
+	return
+}
+
+func editMappingHelper(name string, r *http.Request) (returnCode int, message, warning string) {
+	//Check to see that the target mapping exists
+	origMapping, err := store.GetMapping(name)
+	if err != nil {
+		if err == store.ErrNotFound {
+			return http.StatusNotFound, fmt.Sprintf("No mapping could be found with name: `%s`", name), ""
+		}
+		return http.StatusInternalServerError, "Encountered an error while contacting the backend store", ""
+	}
+	//Convert the mapping into a map we can edit more easily
+	var origMappingMap map[string]interface{}
+	origMappingMap, err = origMapping.ToMap()
+	if err != nil {
+		return http.StatusInternalServerError, "Encountered an error when handling JSON", ""
+	}
+	//Read the request body into a string we can use
+	bodyBytes, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		return http.StatusInternalServerError, "An error was encountered while reading the request body", ""
+	}
+	//Make sure a request body was actually provided
+	if len(bodyBytes) == 0 {
+		return http.StatusBadRequest, "No request body was provided to the edit call", ""
+	}
+	//Unmarshal the request body's JSON into a map we can validate with
+	var requestMapping map[string]interface{}
+	err = json.Unmarshal(bodyBytes, &requestMapping)
+	if err != nil {
+		return http.StatusBadRequest, "The provided JSON body could not be parsed", ""
+	}
+	//Merge the requested fields on top of the existing mapping object
+	var additionalFields []string
+	for k, v := range requestMapping {
+		if !isMappingField(k) {
+			origMappingMap[k] = v
+			if !isMappingField(k) {
+				additionalFields = append(additionalFields, k)
+			}
+		}
+	}
+	if len(additionalFields) > 0 {
+		warning = fmt.Sprintf("Extraneous fields in the provided JSON were ignored: `%s`", strings.Join(additionalFields, "`, `"))
+	}
+	//Validate that the provided body has the expected JSON fields
+	missingFields := missingRequiredFields(origMappingMap)
+	if len(missingFields) > 0 {
+		return http.StatusBadRequest, fmt.Sprintf("The provided JSON body was missing key(s): `%s`", strings.Join(missingFields, "`, `")), warning
+	}
+	//Turn the map back into a Mapping
+	origMapping, err = store.MappingFromMap(origMappingMap)
+
+	err = store.EditMapping(name, origMapping)
+	if err != nil {
+		if err == store.ErrNotFound {
+			//This could happen if a delete call gets snuck in while we're in this call
+			return http.StatusNotFound,
+				fmt.Sprintf("There was no store found with the given name: `%s`", name),
+				warning
+		}
+		//TODO: Another case will be needed here when mapping constraints are implemented
+		return http.StatusInternalServerError,
+			"Encountered an error while contacting the backend store",
+			warning
+	}
+	return http.StatusOK, "", warning
 }
 
 //DeleteMapping is an HTTP handler that removes the mapping with the name
@@ -198,4 +274,17 @@ func EditMapping(w http.ResponseWriter, r *http.Request) {
 // 500 - Internal error - i.e. Store cannot be reached.
 func DeleteMapping(w http.ResponseWriter, r *http.Request) {
 	//TODO
+}
+
+func isMappingField(key string) bool {
+	return key == "name" || key == "location"
+}
+
+func missingRequiredFields(m map[string]interface{}) (missing []string) {
+	for _, field := range store.RequiredMappingFields {
+		if _, found := m[field]; !found {
+			missing = append(missing, field)
+		}
+	}
+	return
 }
