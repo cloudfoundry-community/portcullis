@@ -51,17 +51,15 @@ func Initialize(conf config.APIConfig) (err error) {
 		log.Errorf("Unrecognized auth type: %s ; Reconfigure and try again", conf.Auth.Type)
 	}
 
-	r := mux.NewRouter()
-	s := r.PathPrefix("/v1").Subrouter()
+	router := mux.NewRouter()
+	s := router.PathPrefix("/v1").Subrouter()
 	s.HandleFunc("/mappings", auth.Auth(GetMappings)).Methods("GET")
 	s.HandleFunc("/mappings/{name}", auth.Auth(GetMappings)).Methods("GET")
 	s.HandleFunc("/mappings", auth.Auth(CreateMapping)).Methods("POST")
 	s.HandleFunc("/mappings/{name}", auth.Auth(DeleteMapping)).Methods("DELETE")
 	s.HandleFunc("/mappings/{name}", auth.Auth(EditMapping)).Methods("PUT")
 
-	r.NotFoundHandler = RespondNotFound{}
-	router = r
-	//TODO: Overwrite NotFoundHandler with responsify use
+	router.NotFoundHandler = RespondNotFound{}
 	return
 }
 
@@ -89,7 +87,7 @@ func Launch(e chan<- error) {
 		panic("Initialize not called")
 	}
 
-	log.Infof("Listening on port %d", port)
+	log.Infof("API Listening on port %d", port)
 	e <- http.ListenAndServe(fmt.Sprintf(":%d", port), router)
 
 	return

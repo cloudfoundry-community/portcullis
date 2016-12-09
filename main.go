@@ -4,6 +4,7 @@ import (
 	"os"
 
 	"github.com/cloudfoundry-community/portcullis/api"
+	"github.com/cloudfoundry-community/portcullis/broker"
 	"github.com/cloudfoundry-community/portcullis/config"
 	"github.com/cloudfoundry-community/portcullis/store"
 	"github.com/starkandwayne/goutils/log"
@@ -42,9 +43,13 @@ func main() {
 	}
 	apiChan := make(chan error)
 	go api.Launch(apiChan)
+	brokerChan := make(chan error)
+	go broker.Launch(brokerChan)
 	select {
 	case err := <-apiChan:
 		bailWith("API Server closed with error: %s", err)
+	case err := <-brokerChan:
+		bailWith("Broker Server closed with error: %s", err)
 	}
 }
 
