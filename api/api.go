@@ -59,6 +59,7 @@ func Initialize(conf config.APIConfig) (err error) {
 	s.HandleFunc("/mappings/{name}", auth.Auth(DeleteMapping)).Methods("DELETE")
 	s.HandleFunc("/mappings/{name}", auth.Auth(EditMapping)).Methods("PUT")
 
+	r.NotFoundHandler = RespondNotFound{}
 	router = r
 	//TODO: Overwrite NotFoundHandler with responsify use
 	return
@@ -165,4 +166,12 @@ func responsify(statuscode int, contents interface{}, message string, warning ..
 		panic("Could not marshal response in API")
 	}
 	return
+}
+
+//RespondNotFound is this APIs NotFoundHandler
+type RespondNotFound struct{}
+
+func (RespondNotFound) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotFound)
+	w.Write(responsify(http.StatusNotFound, nil, "No API route matched the request endpoint"))
 }

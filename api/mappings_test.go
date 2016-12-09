@@ -933,6 +933,16 @@ var _ = Describe("Mappings", func() {
 	})
 
 	Describe("Route Not Found", func() {
-		//TODO
+		BeforeEach(func() {
+			testRequest = httptest.NewRequest("GET", "/somerandomroute", nil)
+		})
+
+		It("should have a return code of 404", func() {
+			Expect(testResponse.Code).To(Equal(http.StatusNotFound))
+		})
+
+		It("should have a meta status of Not Found", func() {
+			Expect(getMetaStatus()).To(Equal("Not Found"))
+		})
 	})
 })
