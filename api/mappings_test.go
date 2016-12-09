@@ -513,11 +513,6 @@ var _ = Describe("Mappings", func() {
 				BeforeEach(func() {
 					mappingToEdit = genTestMapping().WithName(origMapping.Name)
 					assignBody(mappingToJSON(mappingToEdit))
-					fmt.Printf("Request: %+v\n", testRequest)
-				})
-
-				AfterEach(func() {
-					fmt.Printf("ResponseBody: %s", testResponse.Body.String())
 				})
 
 				It("should have a return code of 200", func() {

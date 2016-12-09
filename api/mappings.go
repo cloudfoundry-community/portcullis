@@ -261,7 +261,6 @@ func editMappingHelper(name string, r *http.Request) (returnCode int, message, w
 		return http.StatusBadRequest, "Unable to create mapping object from provided body", ""
 	}
 
-	fmt.Printf("origMapping: %s", origMapping)
 	err = store.EditMapping(name, origMapping)
 	if err != nil {
 		if err == store.ErrNotFound {
