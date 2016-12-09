@@ -7,6 +7,8 @@ type schema interface {
 	// remains consistent across schemas
 	// Migration should be done as a single transaction if possible so that it
 	// rolls back if there is a failure.
-	migrate( /*TODO: Connection info or connection object?*/ ) error
+	//Schema version migrate() is responsible for writing it's version to the
+	// table
+	migrate(*Postgres) error
 	version() int
 }

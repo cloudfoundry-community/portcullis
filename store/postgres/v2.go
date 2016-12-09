@@ -2,12 +2,12 @@ package postgres
 
 import "github.com/starkandwayne/goutils/log"
 
-type v1 struct {
+type v2 struct {
 }
 
-func (v v1) migrate(p *Postgres) error {
+func (v v2) migrate(p *Postgres) error {
 
-	log.Debugf("Starting v1 Migration...")
+	log.Debugf("Starting v2 Migration...")
 
 	transaction, err := p.connection.Begin()
 
@@ -22,16 +22,17 @@ func (v v1) migrate(p *Postgres) error {
 		}
 	}()
 
-	_, err = transaction.Exec(`CREATE TABLE schema_info (
-               version INTEGER
-             )`)
+	_, err = transaction.Exec(`CREATE TABLE mappings (
+						 name      TEXT PRIMARY KEY,
+						 location  TEXT NOT NULL,
+						 config    TEXT NOT NULL DEFAULT '{}'
+					 )`)
 	if err != nil {
 		log.Debugf("Failed perform command: %s", err.Error())
 		return err
 	}
-	//defer p.connection.Close() //needed for Exec?
 
-	_, err = transaction.Exec(`INSERT INTO schema_info VALUES ($1)`, v.version())
+	_, err = transaction.Exec(`UPDATE schema_info SET version = $1`, v.version())
 	if err != nil {
 		log.Debugf("Failed perform command: %s", err.Error())
 		return err
@@ -44,8 +45,9 @@ func (v v1) migrate(p *Postgres) error {
 	}
 
 	return nil
+
 }
 
-func (v v1) version() int {
-	return 1
+func (v v2) version() int {
+	return 2
 }

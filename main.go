@@ -32,7 +32,7 @@ func main() {
 	if err != nil {
 		bailWith("Error while setting store type: %s", err)
 	}
-	store.Initialize(conf.Store.Config)
+	err = store.Initialize(conf.Store.Config)
 	if err != nil {
 		bailWith("Error while initializing store: %s", err)
 	}
