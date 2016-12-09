@@ -140,20 +140,17 @@ func createMappingHelper(r *http.Request) (returnCode int, message, warning stri
 		warning = fmt.Sprintf("Extraneous fields in the provided JSON were ignored: `%s`", strings.Join(additionalFields, "`, `"))
 	}
 	//Validate that the provided body has the expected JSON fields
-	_, found := m["name"]
-	if !found {
-		return http.StatusBadRequest, "The provided JSON body did not have a `name` key", warning
-	}
-	_, found = m["location"]
-	if !found {
-		return http.StatusBadRequest, "The provided JSON body did not have a `location` key", warning
+	missingFields := missingRequiredFields(m)
+	if len(missingFields) > 0 {
+		return http.StatusBadRequest, fmt.Sprintf("The provided JSON body was missing key(s): `%s`", strings.Join(missingFields, "`, `")), warning
 	}
 	//Unmarshal into a mapping object we can add to the store
 	var mapping store.Mapping
 	err = json.Unmarshal(bodyBytes, &mapping)
 	if err != nil {
-		//If we could unmarshal into a map but not this struct, something is wrong programmatically
-		return http.StatusInternalServerError, "There was an error while parsing the JSON body", warning
+		//If we could unmarshal into a map, but not back into this struct, the users
+		// fields were probably of the wrong type
+		return http.StatusBadRequest, "There was an error while parsing the JSON body (are your fields of the wrong type?)", warning
 	}
 	err = store.AddMapping(mapping)
 	if err != nil {
@@ -249,18 +246,14 @@ func editMappingHelper(name string, r *http.Request) (returnCode int, message, w
 		}
 		warning = fmt.Sprintf("%sNo relevant mapping fields were provided to the request body", warning)
 	}
-	//Validate that the provided body has the expected JSON fields
-	missingFields := missingRequiredFields(origMappingMap)
-	if len(missingFields) > 0 {
-		return http.StatusBadRequest, fmt.Sprintf("The provided JSON body was missing key(s): `%s`", strings.Join(missingFields, "`, `")), warning
-	}
 	//Turn the map back into a Mapping
 	origMapping, err = store.MappingFromMap(origMappingMap)
 	if err != nil {
 		//This could happen if given fields are the wrong type
-		return http.StatusBadRequest, "Unable to create mapping object from provided body", ""
+		return http.StatusBadRequest, "Unable to create mapping object from provided body (Are your fields of the correct type?)", ""
 	}
 
+	//Actually edit the mapping, now
 	err = store.EditMapping(name, origMapping)
 	if err != nil {
 		if err == store.ErrNotFound {

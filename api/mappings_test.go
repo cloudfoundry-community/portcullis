@@ -484,6 +484,21 @@ var _ = Describe("Mappings", func() {
 				Expect(m).To(Equal(testMapping))
 			})
 		})
+
+		Context("When the JSON body has types for known fields other than what the mapping expects", func() {
+			BeforeEach(func() {
+				assignBody([]byte(`{"name": 1, "location":false}`))
+			})
+
+			It("should have a return code of 400", func() {
+				Expect(testResponse.Code).To(Equal(http.StatusBadRequest))
+			})
+
+			It("should have a meta status of Error", func() {
+				Expect(getMetaStatus()).To(Equal("Error"))
+			})
+		})
+
 	})
 
 	Describe("EditMapping", func() {
@@ -755,6 +770,21 @@ var _ = Describe("Mappings", func() {
 					})
 				})
 			})
+
+			Context("When the JSON body has types for known fields other than what the mapping expects", func() {
+				BeforeEach(func() {
+					assignBody([]byte(`{"name": 1, "location":false}`))
+				})
+
+				It("should have a return code of 400", func() {
+					Expect(testResponse.Code).To(Equal(http.StatusBadRequest))
+				})
+
+				It("should have a meta status of Error", func() {
+					Expect(getMetaStatus()).To(Equal("Error"))
+				})
+			})
+
 		})
 
 		Context("When there is no existing mapping to edit", func() {
@@ -810,6 +840,7 @@ var _ = Describe("Mappings", func() {
 					Expect(size).To(Equal(numMappings))
 				})
 			})
+
 		})
 
 	})
