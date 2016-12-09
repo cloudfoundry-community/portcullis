@@ -278,7 +278,25 @@ func editMappingHelper(name string, r *http.Request) (returnCode int, message, w
 // 404 - The mapping is already not present in the store
 // 500 - Internal error - i.e. Store cannot be reached.
 func DeleteMapping(w http.ResponseWriter, r *http.Request) {
-	//TODO
+	var name string
+	if varName, nameSpecified := mux.Vars(r)["name"]; nameSpecified {
+		name = varName
+	}
+	returnCode, message := deleteMappingHelper(name)
+	w.WriteHeader(returnCode)
+	respBody := responsify(returnCode, nil, message)
+	w.Write(respBody)
+}
+
+func deleteMappingHelper(name string) (returnCode int, message string) {
+	err := store.DeleteMapping(name)
+	if err != nil {
+		if err == store.ErrNotFound {
+			return http.StatusNotFound, "No mapping with that name exists in the backend store"
+		}
+		return http.StatusInternalServerError, "Encountered an error while contacting the backend store"
+	}
+	return http.StatusOK, ""
 }
 
 func isMappingField(key string) bool {
