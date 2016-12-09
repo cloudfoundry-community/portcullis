@@ -228,18 +228,26 @@ func editMappingHelper(name string, r *http.Request) (returnCode int, message, w
 	if err != nil {
 		return http.StatusBadRequest, "The provided JSON body could not be parsed", ""
 	}
+	var changedFields = 0
+
 	//Merge the requested fields on top of the existing mapping object
 	var additionalFields []string
 	for k, v := range requestMapping {
-		if !isMappingField(k) {
+		if isMappingField(k) {
 			origMappingMap[k] = v
-			if !isMappingField(k) {
-				additionalFields = append(additionalFields, k)
-			}
+			changedFields++
+		} else {
+			additionalFields = append(additionalFields, k)
 		}
 	}
 	if len(additionalFields) > 0 {
 		warning = fmt.Sprintf("Extraneous fields in the provided JSON were ignored: `%s`", strings.Join(additionalFields, "`, `"))
+	}
+	if changedFields == 0 {
+		if warning != "" {
+			warning += "\n"
+		}
+		warning = fmt.Sprintf("%sNo relevant mapping fields were provided to the request body", warning)
 	}
 	//Validate that the provided body has the expected JSON fields
 	missingFields := missingRequiredFields(origMappingMap)
@@ -248,7 +256,12 @@ func editMappingHelper(name string, r *http.Request) (returnCode int, message, w
 	}
 	//Turn the map back into a Mapping
 	origMapping, err = store.MappingFromMap(origMappingMap)
+	if err != nil {
+		//This could happen if given fields are the wrong type
+		return http.StatusBadRequest, "Unable to create mapping object from provided body", ""
+	}
 
+	fmt.Printf("origMapping: %s", origMapping)
 	err = store.EditMapping(name, origMapping)
 	if err != nil {
 		if err == store.ErrNotFound {

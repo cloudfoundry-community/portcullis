@@ -690,10 +690,8 @@ var _ = Describe("Mappings", func() {
 					verifyNoContentsHash()
 
 					Specify("the mapping should have retained its original name", func() {
-						var m store.Mapping
-						m, err = store.GetMapping(origMapping.Name)
+						_, err = store.GetMapping(origMapping.Name)
 						Expect(err).NotTo(HaveOccurred())
-						Expect(m.Name).To(Equal(origName))
 					})
 
 					Specify("the mappings non-name attributes should be those of the edited input", func() {
@@ -776,7 +774,7 @@ var _ = Describe("Mappings", func() {
 				})
 
 				It("should have a meta status of Not Found", func() {
-					Expect(getMetaStatus).To(Equal("Not Found"))
+					Expect(getMetaStatus()).To(Equal("Not Found"))
 				})
 
 				verifyNoContentsHash()
