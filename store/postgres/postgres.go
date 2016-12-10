@@ -205,7 +205,19 @@ func (p *Postgres) AddMapping(m store.Mapping) error {
 func (p *Postgres) EditMapping(name string, m store.Mapping) error {
 	log.Debugf("Attempting to update a row in mappings table...")
 
-	_, err := p.connection.Exec(`UPDATE mappings SET name = $1, location = $2 WHERE name = $3`, m.Name, m.Location, name)
+	var numRows int
+	err := p.connection.QueryRow(`SELECT COUNT(name) FROM mappings WHERE name = $1`, name).Scan(&numRows)
+	if err != nil {
+		log.Infof("Scan error attempting to retrieve row with name: %s", name)
+		return err
+	}
+
+	if numRows < 1 {
+		log.Infof("No mappings found for key value: %s", name)
+		return fmt.Errorf("The requested mapping was not found in the store")
+	}
+
+	_, err = p.connection.Exec(`UPDATE mappings SET name = $1, location = $2 WHERE name = $3`, m.Name, m.Location, name)
 
 	if err != nil {
 		if err.(*pq.Error).Code == "23505" {
@@ -222,27 +234,16 @@ func (p *Postgres) EditMapping(name string, m store.Mapping) error {
 func (p *Postgres) DeleteMapping(name string) error {
 	log.Debugf("Attempting to delete a row from mappings table...")
 
-	r, err := p.connection.Query(`SELECT COUNT(name) FROM mappings WHERE name = $1`, name)
-	if err != nil {
-		log.Infof("Could not determine the number of rows for mapping key value: %s", name)
-		return err
-	}
-	defer r.Close()
-
-	if !r.Next() {
-		log.Infof("Could not determine move to first scanned row in mappings for key value: %s", name)
-		return nil
-	}
-
 	var numRows int
-	if err = r.Scan(&numRows); err != nil {
-		log.Infof("Could not determine the scan number of rows in mappings for key value: %s", name)
+	err := p.connection.QueryRow(`SELECT COUNT(name) FROM mappings WHERE name = $1`, name).Scan(&numRows)
+	if err != nil {
+		log.Infof("Scan error attempting to retrieve row with name: %s", name)
 		return err
 	}
 
 	if numRows < 1 {
 		log.Infof("No mappings found for key value: %s", name)
-		return fmt.Errorf("No mappings found with name %s", name)
+		return fmt.Errorf("The requested mapping was not found in the store")
 	}
 
 	_, err = p.connection.Exec(`DELETE FROM mappings WHERE name = $1`, name)
