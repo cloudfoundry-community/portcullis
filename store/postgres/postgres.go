@@ -128,47 +128,30 @@ func (p *Postgres) Initialize(conf map[string]interface{}) error {
 		}
 	}
 
-	//Me playing until I figure out how to create a test harness...
-	testMapping := store.Mapping{
-		Name:     "fun",
-		Location: "wow",
-	}
-
-	err = p.AddMapping(testMapping)
-
-	err = p.AddMapping(testMapping)
-
-	pickles, err := p.GetMapping("funn")
-	fmt.Printf("%+v\n", pickles)
-
-	//
-	//	updateMapping := store.Mapping{
-	//		Name:     "orange",
-	//		Location: "juice",
-	//	}
-	//
-	//	err = p.EditMapping("fun", updateMapping)
-	//
-	// err = p.DeleteMapping("orange")
-
-	numRows, _ := p.Size()
-	log.Debugf("Found %d rows in mappings", numRows)
-
-	err = p.ClearMappings()
-
-	numRows2, _ := p.Size()
-	log.Debugf("Found %d rows in mappings", numRows2)
-
 	return nil
 }
 
 //ListMappings returns the list of all mappings stored in the Postgres database
 func (p *Postgres) ListMappings() ([]store.Mapping, error) {
-	//TODO
+	log.Debugf("Attempting to retrieve all rows from mappings table...")
+	rows, err := p.connection.Query("SELECT name, location FROM mappings")
+	if err != nil {
+		log.Infof("Scan error attempting to retrieve all rows from mapping")
+		return []store.Mapping{}, err
+	}
+	ret := []store.Mapping{}
+	for rows.Next() {
+		var name, location string
+		err := rows.Scan(&name, &location)
+		if err != nil {
+			log.Infof("Scan error attempting to retrieve all rows from mapping")
+			return []store.Mapping{}, err
+		}
+		log.Debugf("Found row: %s, %s", name, location)
+		ret = append(ret, store.Mapping{Name: name, Location: location})
+	}
 
-	//rows, err := p.connection.Query("SELECT name, location FROM mappings")
-
-	return nil, fmt.Errorf("Not yet implemented")
+	return ret, err
 }
 
 //GetMapping returns a mapping corresponding to the name given. Errs if no
