@@ -93,7 +93,9 @@ func AddMapping(m Mapping) error {
 
 //EditMapping edits the mapping with the name in the given Mapping to
 //have all the values in the given Mapping. Should return ErrNotFound if there
-//is no mapping in the store with the name in the given Mapping
+//is no mapping in the store with the name in the given Mapping. Should return
+//ErrDuplicate if the name is being edited, and the name to edit to already
+//exists in the store.
 func EditMapping(name string, m Mapping) error {
 	return activeStore.EditMapping(name, m)
 }

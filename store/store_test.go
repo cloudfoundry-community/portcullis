@@ -350,8 +350,7 @@ var _ = Describe("Store", func() {
 
 				BeforeEach(func() {
 					origMapping = genTestMapping()
-					err = AddMapping(origMapping)
-					Expect(err).NotTo(HaveOccurred())
+					Expect(AddMapping(origMapping)).To(Succeed())
 					editedMapping = genTestMapping().WithName(origMapping.Name)
 					targetName = origMapping.Name
 				})
@@ -398,7 +397,7 @@ var _ = Describe("Store", func() {
 						Expect(returnedMapping).To(Equal(editedMapping))
 					})
 
-					Specify("The old mapping should not be in the database", func() {
+					Specify("The old mapping should not be in the store", func() {
 						var mapList MappingList
 						mapList, err = ListMappings()
 						Expect(err).NotTo(HaveOccurred())
@@ -407,11 +406,36 @@ var _ = Describe("Store", func() {
 						}
 					})
 
-					It("should only have one mapping in the db", func() {
+					It("should only have one mapping in the store", func() {
 						var size int
 						size, err = Size()
 						Expect(err).NotTo(HaveOccurred())
 						Expect(size).To(Equal(1))
+					})
+				})
+
+				Context("to a mapping that also already exists", func() {
+					var conflictingMapping Mapping
+					BeforeEach(func() {
+						conflictingMapping = genTestMapping()
+						Expect(AddMapping(conflictingMapping)).To(Succeed())
+						editedMapping = genTestMapping().WithName(conflictingMapping.Name)
+					})
+
+					It("should return an ErrDuplicate", func() {
+						Expect(err).To(Equal(ErrDuplicate))
+					})
+
+					Specify("The store should still have the original mapping", func() {
+						m, err := GetMapping(targetName)
+						Expect(err).NotTo(HaveOccurred())
+						Expect(m).To(Equal(origMapping))
+					})
+
+					It("should only have two mappings in the store", func() {
+						s, err := Size()
+						Expect(err).NotTo(HaveOccurred())
+						Expect(s).To(Equal(2))
 					})
 				})
 			})

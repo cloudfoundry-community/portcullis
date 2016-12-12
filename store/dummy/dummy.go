@@ -101,7 +101,18 @@ func (d *Dummy) EditMapping(name string, m store.Mapping) error {
 	}
 
 	if _, err := d.GetMapping(name); err != nil {
-		return store.ErrNotFound
+		return err
+	}
+
+	//Check if the name to edit to already exists in the store
+	if name != m.Name {
+		//dummy won't return error other than NotFound for GetMapping (unless not
+		// initialized, but we would've already caught that). Other stores need to
+		// handle connection errors and the like
+		if _, err := d.GetMapping(m.Name); err == nil {
+			//if there's no error, that means it was found and this is a duplicate
+			return store.ErrDuplicate
+		}
 	}
 
 	delete(d.storage, name)
