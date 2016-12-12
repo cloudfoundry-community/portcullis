@@ -138,7 +138,7 @@ var _ = Describe("Store", func() {
 					err = AddMapping(genTestMapping().WithName(firstMapping.Name))
 				})
 
-				It("should throw an error", func() {
+				It("should return ErrDuplicate", func() {
 					Expect(err).To(Equal(ErrDuplicate))
 				})
 			})
@@ -314,7 +314,7 @@ var _ = Describe("Store", func() {
 						err = DeleteMapping(targetMapping.Name)
 					})
 
-					It("should throw an error", func() {
+					It("should return ErrNotFound", func() {
 						Expect(err).To(Equal(ErrNotFound))
 					})
 				})
@@ -446,7 +446,7 @@ var _ = Describe("Store", func() {
 				})
 
 				It("should return an error", func() {
-					Expect(err).To(HaveOccurred())
+					Expect(err).To(Equal(ErrNotFound))
 				})
 
 				Specify("the mapping should still not exist in the store", func() {
