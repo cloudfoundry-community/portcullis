@@ -22,6 +22,7 @@ func (v v2) migrate(p *Postgres) error {
 		}
 	}()
 
+	// Creates the mappings table to store the application security groups. 
 	_, err = transaction.Exec(`CREATE TABLE mappings (
 						 name      TEXT PRIMARY KEY,
 						 location  TEXT NOT NULL,
@@ -32,6 +33,8 @@ func (v v2) migrate(p *Postgres) error {
 		return err
 	}
 
+  // Forces that this schema update was done via transaction, this leaves an
+	// artifact that the migration is complete
 	_, err = transaction.Exec(`UPDATE schema_info SET version = $1`, v.version())
 	if err != nil {
 		log.Debugf("Failed perform command: %s", err.Error())

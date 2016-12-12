@@ -22,6 +22,9 @@ func (v v1) migrate(p *Postgres) error {
 		}
 	}()
 
+  // Creates the schema_info table to hold the version number of the schemas in
+	// this repo.  Schema versions should be sequential step 1.  Done in a
+	// transaction.
 	_, err = transaction.Exec(`CREATE TABLE schema_info (
                version INTEGER
              )`)
@@ -31,6 +34,8 @@ func (v v1) migrate(p *Postgres) error {
 	}
 	//defer p.connection.Close() //needed for Exec?
 
+  // Inserts the very first version (1) which is simply that the table was created
+	// successfully as well as this row was inserted transactionally.
 	_, err = transaction.Exec(`INSERT INTO schema_info VALUES ($1)`, v.version())
 	if err != nil {
 		log.Debugf("Failed perform command: %s", err.Error())
