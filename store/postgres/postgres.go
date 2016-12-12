@@ -214,7 +214,7 @@ func (p *Postgres) EditMapping(name string, m store.Mapping) error {
 
 	if numRows < 1 {
 		log.Infof("No mappings found for key value: %s", name)
-		return fmt.Errorf("The requested mapping was not found in the store")
+		return store.ErrNotFound
 	}
 
 	_, err = p.connection.Exec(`UPDATE mappings SET name = $1, location = $2 WHERE name = $3`, m.Name, m.Location, name)

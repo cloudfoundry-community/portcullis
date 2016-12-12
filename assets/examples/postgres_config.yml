@@ -2,7 +2,7 @@ store:
   type: "postgres"
   config:
     host: 192.168.99.100
-    port: 32774
+    port: 32775
     dbname: portcullis
     username: portcullisadmin
     password: "789abc123!!"
