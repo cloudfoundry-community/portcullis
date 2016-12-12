@@ -14,7 +14,7 @@ import "net/http"
 
 var (
 	auth   Authorizer
-	router http.Handler
+	router *mux.Router
 	port   int
 )
 
@@ -51,7 +51,7 @@ func Initialize(conf config.APIConfig) (err error) {
 		log.Errorf("Unrecognized auth type: %s ; Reconfigure and try again", conf.Auth.Type)
 	}
 
-	router := mux.NewRouter()
+	router = mux.NewRouter()
 	s := router.PathPrefix("/v1").Subrouter()
 	s.HandleFunc("/mappings", auth.Auth(GetMappings)).Methods("GET")
 	s.HandleFunc("/mappings/{name}", auth.Auth(GetMappings)).Methods("GET")
@@ -161,7 +161,7 @@ func responsify(statuscode int, contents interface{}, message string, warning ..
 	if err != nil {
 		//This API facing panic makes me uneasy. May switch to logging an error
 		// at a later time and returning a pre-baked response
-		panic("Could not marshal response in API")
+		panic(fmt.Sprintf("Could not marshal response in API: %+v", responseData))
 	}
 	return
 }

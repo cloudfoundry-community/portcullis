@@ -257,9 +257,15 @@ func editMappingHelper(name string, r *http.Request) (returnCode int, message, w
 	err = store.EditMapping(name, origMapping)
 	if err != nil {
 		if err == store.ErrNotFound {
-			//This could happen if a delete call gets snuck in while we're in this call
+			//This could happen if a delete or other edit call gets snuck in while
+			// we're in this call
 			return http.StatusNotFound,
 				fmt.Sprintf("There was no store found with the given name: `%s`", name),
+				warning
+		} else if err == store.ErrDuplicate {
+			//Can't change the name to a name that's already taken
+			return http.StatusConflict,
+				fmt.Sprintf("There is already a mapping with the name that the edit was requested to take: %s", origMapping.Name),
 				warning
 		}
 		//TODO: Another case will be needed here when mapping constraints are implemented

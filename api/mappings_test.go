@@ -33,17 +33,18 @@ var _ = Describe("Mappings", func() {
 
 	JustBeforeEach(func() {
 		//Set up the proper auth. Assumes initialize works
-		err = Initialize(config.APIConfig{
+		Expect(Initialize(config.APIConfig{
 			Port: 5590,
 			Auth: config.AuthConfig{
 				Type:   "none",
 				Config: nil,
 			},
-		})
-		Expect(err).NotTo(HaveOccurred())
+		})).To(Succeed())
 
 		//Generate a test Request and ResponseWriter to give to the handler
 		testResponse = httptest.NewRecorder()
+
+		GinkgoWriter.Write([]byte(fmt.Sprintf("Router: %+v\nRequest: %+v\n", Router(), testRequest)))
 
 		//Fire it at the router. Results go to testResponse
 		Router().ServeHTTP(testResponse, testRequest)
@@ -576,6 +577,22 @@ var _ = Describe("Mappings", func() {
 					Expect(err).NotTo(HaveOccurred())
 					Expect(m).To(Equal(mappingToEdit))
 				})
+
+				Context("But that name is already taken by a different mapping", func() {
+					BeforeEach(func() {
+						Expect(store.AddMapping(genTestMapping().WithName(mappingToEdit.Name))).To(Succeed())
+					})
+
+					It("should have a return code of 409", func() {
+						Expect(testResponse.Code).To(Equal(http.StatusConflict))
+					})
+
+					It("should have a meta status of Error", func() {
+						Expect(getMetaStatus()).To(Equal("Error"))
+					})
+
+					verifyNoContentsHash()
+				})
 			})
 
 			Context("When editing a mapping in a store with other mappings", func() {
@@ -929,7 +946,6 @@ var _ = Describe("Mappings", func() {
 				assertDeleteFailure()
 			})
 		})
-
 	})
 
 	Describe("Route Not Found", func() {
