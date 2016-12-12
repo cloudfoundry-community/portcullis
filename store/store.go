@@ -87,6 +87,8 @@ func GetMapping(name string) (Mapping, error) {
 // mapping with that name already exists in the store
 func AddMapping(m Mapping) error {
 	//TODO: Create and enforce restrictions on mapping fields
+	//  Make sure name is proper length/content
+	//  Make sure location is parseable as a URL
 	return activeStore.AddMapping(m)
 
 }
@@ -97,6 +99,7 @@ func AddMapping(m Mapping) error {
 //ErrDuplicate if the name is being edited, and the name to edit to already
 //exists in the store.
 func EditMapping(name string, m Mapping) error {
+	//TODO: See restriction checking for AddMapping
 	return activeStore.EditMapping(name, m)
 }
 
