@@ -111,6 +111,7 @@ func (p *Postgres) Initialize(conf map[string]interface{}) error {
 	currentVersion, err = p.getSchemaVersion()
 	if err != nil {
 		log.Debugf("schema error")
+		return err
 	}
 
 	log.Debugf("schema found: %d", currentVersion)
@@ -257,22 +258,11 @@ func (p *Postgres) DeleteMapping(name string) error {
 func (p *Postgres) Size() (int, error) {
 	log.Debugf("Getting the row count in the mappings table...")
 
-	r, err := p.connection.Query(`SELECT COUNT(name) FROM mappings`)
-	if err != nil {
-		log.Infof("Could not query the count of rows in mappings")
-		return -1, err
-	}
-	defer r.Close()
-
-	if !r.Next() {
-		log.Infof("Could not determine move to first scanned row in mappings for row count")
-		return -1, nil
-	}
-
 	var numRows int
-	if err = r.Scan(&numRows); err != nil {
-		log.Infof("Could not determine the scan number of rows in mapping")
-		return -1, err
+	err := p.connection.QueryRow(`SELECT COUNT(name) FROM mappings`).Scan(&numRows)
+	if err != nil {
+		log.Infof("Scan error attempting to retrieve row count")
+		return 0, err
 	}
 
 	return numRows, nil
