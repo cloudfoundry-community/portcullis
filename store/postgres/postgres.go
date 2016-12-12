@@ -243,7 +243,7 @@ func (p *Postgres) DeleteMapping(name string) error {
 
 	if numRows < 1 {
 		log.Infof("No mappings found for key value: %s", name)
-		return fmt.Errorf("The requested mapping was not found in the store")
+		return store.ErrNotFound
 	}
 
 	_, err = p.connection.Exec(`DELETE FROM mappings WHERE name = $1`, name)
