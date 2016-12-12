@@ -51,16 +51,15 @@ func Initialize(conf config.APIConfig) (err error) {
 		log.Errorf("Unrecognized auth type: %s ; Reconfigure and try again", conf.Auth.Type)
 	}
 
-	r := mux.NewRouter()
-	s := r.PathPrefix("/v1").Subrouter()
+	router := mux.NewRouter()
+	s := router.PathPrefix("/v1").Subrouter()
 	s.HandleFunc("/mappings", auth.Auth(GetMappings)).Methods("GET")
 	s.HandleFunc("/mappings/{name}", auth.Auth(GetMappings)).Methods("GET")
 	s.HandleFunc("/mappings", auth.Auth(CreateMapping)).Methods("POST")
 	s.HandleFunc("/mappings/{name}", auth.Auth(DeleteMapping)).Methods("DELETE")
 	s.HandleFunc("/mappings/{name}", auth.Auth(EditMapping)).Methods("PUT")
 
-	router = r
-	//TODO: Overwrite NotFoundHandler with responsify use
+	router.NotFoundHandler = RespondNotFound{}
 	return
 }
 
@@ -88,7 +87,7 @@ func Launch(e chan<- error) {
 		panic("Initialize not called")
 	}
 
-	log.Infof("Listening on port %d", port)
+	log.Infof("API Listening on port %d", port)
 	e <- http.ListenAndServe(fmt.Sprintf(":%d", port), router)
 
 	return
@@ -165,4 +164,12 @@ func responsify(statuscode int, contents interface{}, message string, warning ..
 		panic("Could not marshal response in API")
 	}
 	return
+}
+
+//RespondNotFound is this APIs NotFoundHandler
+type RespondNotFound struct{}
+
+func (RespondNotFound) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotFound)
+	w.Write(responsify(http.StatusNotFound, nil, "No API route matched the request endpoint"))
 }

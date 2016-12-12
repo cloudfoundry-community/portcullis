@@ -140,20 +140,17 @@ func createMappingHelper(r *http.Request) (returnCode int, message, warning stri
 		warning = fmt.Sprintf("Extraneous fields in the provided JSON were ignored: `%s`", strings.Join(additionalFields, "`, `"))
 	}
 	//Validate that the provided body has the expected JSON fields
-	_, found := m["name"]
-	if !found {
-		return http.StatusBadRequest, "The provided JSON body did not have a `name` key", warning
-	}
-	_, found = m["location"]
-	if !found {
-		return http.StatusBadRequest, "The provided JSON body did not have a `location` key", warning
+	missingFields := missingRequiredFields(m)
+	if len(missingFields) > 0 {
+		return http.StatusBadRequest, fmt.Sprintf("The provided JSON body was missing key(s): `%s`", strings.Join(missingFields, "`, `")), warning
 	}
 	//Unmarshal into a mapping object we can add to the store
 	var mapping store.Mapping
 	err = json.Unmarshal(bodyBytes, &mapping)
 	if err != nil {
-		//If we could unmarshal into a map but not this struct, something is wrong programmatically
-		return http.StatusInternalServerError, "There was an error while parsing the JSON body", warning
+		//If we could unmarshal into a map, but not back into this struct, the users
+		// fields were probably of the wrong type
+		return http.StatusBadRequest, "There was an error while parsing the JSON body (are your fields of the wrong type?)", warning
 	}
 	err = store.AddMapping(mapping)
 	if err != nil {
@@ -228,27 +225,35 @@ func editMappingHelper(name string, r *http.Request) (returnCode int, message, w
 	if err != nil {
 		return http.StatusBadRequest, "The provided JSON body could not be parsed", ""
 	}
+	var changedFields = 0
+
 	//Merge the requested fields on top of the existing mapping object
 	var additionalFields []string
 	for k, v := range requestMapping {
-		if !isMappingField(k) {
+		if isMappingField(k) {
 			origMappingMap[k] = v
-			if !isMappingField(k) {
-				additionalFields = append(additionalFields, k)
-			}
+			changedFields++
+		} else {
+			additionalFields = append(additionalFields, k)
 		}
 	}
 	if len(additionalFields) > 0 {
 		warning = fmt.Sprintf("Extraneous fields in the provided JSON were ignored: `%s`", strings.Join(additionalFields, "`, `"))
 	}
-	//Validate that the provided body has the expected JSON fields
-	missingFields := missingRequiredFields(origMappingMap)
-	if len(missingFields) > 0 {
-		return http.StatusBadRequest, fmt.Sprintf("The provided JSON body was missing key(s): `%s`", strings.Join(missingFields, "`, `")), warning
+	if changedFields == 0 {
+		if warning != "" {
+			warning += "\n"
+		}
+		warning = fmt.Sprintf("%sNo relevant mapping fields were provided to the request body", warning)
 	}
 	//Turn the map back into a Mapping
 	origMapping, err = store.MappingFromMap(origMappingMap)
+	if err != nil {
+		//This could happen if given fields are the wrong type
+		return http.StatusBadRequest, "Unable to create mapping object from provided body (Are your fields of the correct type?)", ""
+	}
 
+	//Actually edit the mapping, now
 	err = store.EditMapping(name, origMapping)
 	if err != nil {
 		if err == store.ErrNotFound {
@@ -273,7 +278,25 @@ func editMappingHelper(name string, r *http.Request) (returnCode int, message, w
 // 404 - The mapping is already not present in the store
 // 500 - Internal error - i.e. Store cannot be reached.
 func DeleteMapping(w http.ResponseWriter, r *http.Request) {
-	//TODO
+	var name string
+	if varName, nameSpecified := mux.Vars(r)["name"]; nameSpecified {
+		name = varName
+	}
+	returnCode, message := deleteMappingHelper(name)
+	w.WriteHeader(returnCode)
+	respBody := responsify(returnCode, nil, message)
+	w.Write(respBody)
+}
+
+func deleteMappingHelper(name string) (returnCode int, message string) {
+	err := store.DeleteMapping(name)
+	if err != nil {
+		if err == store.ErrNotFound {
+			return http.StatusNotFound, "No mapping with that name exists in the backend store"
+		}
+		return http.StatusInternalServerError, "Encountered an error while contacting the backend store"
+	}
+	return http.StatusOK, ""
 }
 
 func isMappingField(key string) bool {

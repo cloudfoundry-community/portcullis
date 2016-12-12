@@ -230,6 +230,11 @@ var _ = Describe("Mappings", func() {
 		Context("With a mapping name specified", func() {
 			var targetMapping store.Mapping
 
+			BeforeEach(func() {
+				targetMapping = genTestMapping()
+				testRequest = httptest.NewRequest("GET", fmt.Sprintf("/v1/mappings/%s", targetMapping.Name), nil)
+			})
+
 			var assertSpecificMappingSuccess = func() {
 				It("should return a status code of 200", func() {
 					Expect(testResponse.Code).To(Equal(200))
@@ -263,10 +268,6 @@ var _ = Describe("Mappings", func() {
 				})
 			}
 
-			BeforeEach(func() {
-				targetMapping = genTestMapping()
-				testRequest = httptest.NewRequest("GET", fmt.Sprintf("/v1/mappings/%s", targetMapping.Name), nil)
-			})
 			Context("When the store is empty", func() {
 				assertSpecificMappingFailure()
 			})
@@ -484,11 +485,26 @@ var _ = Describe("Mappings", func() {
 				Expect(m).To(Equal(testMapping))
 			})
 		})
+
+		Context("When the JSON body has types for known fields other than what the mapping expects", func() {
+			BeforeEach(func() {
+				assignBody([]byte(`{"name": 1, "location":false}`))
+			})
+
+			It("should have a return code of 400", func() {
+				Expect(testResponse.Code).To(Equal(http.StatusBadRequest))
+			})
+
+			It("should have a meta status of Error", func() {
+				Expect(getMetaStatus()).To(Equal("Error"))
+			})
+		})
+
 	})
 
 	Describe("EditMapping", func() {
 		var testBody = bytes.NewBuffer([]byte{})
-		var origName string
+		var origName = bytes.NewBuffer([]byte{})
 
 		var assignBody = func(b []byte) {
 			written, err := testBody.Write(b)
@@ -496,25 +512,22 @@ var _ = Describe("Mappings", func() {
 			Expect(written).To(Equal(len(b)))
 		}
 
-		BeforeEach(func() {
-			testRequest = httptest.NewRequest("POST", fmt.Sprintf("/v1/mappings/%s", origName), testBody)
-		})
-
 		AfterEach(func() {
 			testBody.Reset()
+			origName.Reset()
 		})
 
 		Context("When there is an existing mapping with that name to edit", func() {
 			var origMapping, mappingToEdit store.Mapping
 			BeforeEach(func() {
 				origMapping = genTestMapping()
-				origName = origMapping.Name
+				testRequest = httptest.NewRequest("PUT", fmt.Sprintf("/v1/mappings/%s", origMapping.Name), testBody)
 				err = store.AddMapping(origMapping)
 				Expect(err).NotTo(HaveOccurred())
 			})
 			Context("When editing to a mapping with the same name", func() {
 				BeforeEach(func() {
-					mappingToEdit = genTestMapping().WithName(origName)
+					mappingToEdit = genTestMapping().WithName(origMapping.Name)
 					assignBody(mappingToJSON(mappingToEdit))
 				})
 
@@ -530,7 +543,7 @@ var _ = Describe("Mappings", func() {
 
 				Specify("the mapping in the store should reflect the desired edit", func() {
 					var m store.Mapping
-					m, err = store.GetMapping(origName)
+					m, err = store.GetMapping(origMapping.Name)
 					Expect(err).NotTo(HaveOccurred())
 					Expect(m).To(Equal(mappingToEdit))
 				})
@@ -553,7 +566,7 @@ var _ = Describe("Mappings", func() {
 				verifyNoContentsHash()
 
 				Specify("No mapping with the original name should exist in the store", func() {
-					_, err = store.GetMapping(origName)
+					_, err = store.GetMapping(origMapping.Name)
 					Expect(err).To(Equal(store.ErrNotFound))
 				})
 
@@ -568,7 +581,7 @@ var _ = Describe("Mappings", func() {
 			Context("When editing a mapping in a store with other mappings", func() {
 				const numMappings = 150
 				BeforeEach(func() {
-					mappingToEdit = genTestMapping().WithName(origName)
+					mappingToEdit = genTestMapping().WithName(origMapping.Name)
 					for i := 0; i < numMappings-1; i++ {
 						err = store.AddMapping(genTestMapping())
 						Expect(err).NotTo(HaveOccurred())
@@ -588,7 +601,7 @@ var _ = Describe("Mappings", func() {
 
 				Specify("the mapping in the store should reflect the desired edit", func() {
 					var m store.Mapping
-					m, err = store.GetMapping(origName)
+					m, err = store.GetMapping(origMapping.Name)
 					Expect(err).NotTo(HaveOccurred())
 					Expect(m).To(Equal(mappingToEdit))
 				})
@@ -597,7 +610,7 @@ var _ = Describe("Mappings", func() {
 
 			Context("When there are extraneous fields in the JSON body", func() {
 				BeforeEach(func() {
-					mappingToEdit = genTestMapping().WithName(origName)
+					mappingToEdit = genTestMapping().WithName(origMapping.Name)
 					assignBody(mappingToJSONPlus("mishmash", "pishposh", mappingToEdit))
 				})
 
@@ -617,7 +630,7 @@ var _ = Describe("Mappings", func() {
 
 				Specify("the edited version of the mapping should be in the backend store", func() {
 					var m store.Mapping
-					m, err = store.GetMapping(origName)
+					m, err = store.GetMapping(origMapping.Name)
 					Expect(err).NotTo(HaveOccurred())
 					Expect(m).To(Equal(mappingToEdit))
 				})
@@ -641,7 +654,7 @@ var _ = Describe("Mappings", func() {
 
 					It("should not have altered the original mapping", func() {
 						var m store.Mapping
-						m, err = store.GetMapping(origName)
+						m, err = store.GetMapping(origMapping.Name)
 						Expect(err).NotTo(HaveOccurred())
 						Expect(m).To(Equal(origMapping))
 					})
@@ -663,7 +676,7 @@ var _ = Describe("Mappings", func() {
 
 					It("should not have altered the original mapping", func() {
 						var m store.Mapping
-						m, err = store.GetMapping(origName)
+						m, err = store.GetMapping(origMapping.Name)
 						Expect(err).NotTo(HaveOccurred())
 						Expect(m).To(Equal(origMapping))
 					})
@@ -688,15 +701,13 @@ var _ = Describe("Mappings", func() {
 					verifyNoContentsHash()
 
 					Specify("the mapping should have retained its original name", func() {
-						var m store.Mapping
-						m, err = store.GetMapping(origName)
+						_, err = store.GetMapping(origMapping.Name)
 						Expect(err).NotTo(HaveOccurred())
-						Expect(m.Name).To(Equal(origName))
 					})
 
 					Specify("the mappings non-name attributes should be those of the edited input", func() {
 						var m store.Mapping
-						m, err = store.GetMapping(origName)
+						m, err = store.GetMapping(origMapping.Name)
 						Expect(err).NotTo(HaveOccurred())
 						Expect(mappingToJSONWithout("name", m)).To(MatchJSON(mappingToJSONWithout("name", mappingToEdit)))
 					})
@@ -754,18 +765,33 @@ var _ = Describe("Mappings", func() {
 
 					Specify("The original mapping should remain unchanged", func() {
 						var m store.Mapping
-						m, err = store.GetMapping(origName)
+						m, err = store.GetMapping(origMapping.Name)
 						Expect(err).NotTo(HaveOccurred())
 						Expect(m).To(Equal(origMapping))
 					})
 				})
 			})
+
+			Context("When the JSON body has types for known fields other than what the mapping expects", func() {
+				BeforeEach(func() {
+					assignBody([]byte(`{"name": 1, "location":false}`))
+				})
+
+				It("should have a return code of 400", func() {
+					Expect(testResponse.Code).To(Equal(http.StatusBadRequest))
+				})
+
+				It("should have a meta status of Error", func() {
+					Expect(getMetaStatus()).To(Equal("Error"))
+				})
+			})
+
 		})
 
 		Context("When there is no existing mapping to edit", func() {
 			Context("Because the store is empty", func() {
 				BeforeEach(func() {
-					origName = genRandomString()
+					testRequest = httptest.NewRequest("PUT", fmt.Sprintf("/v1/mappings/%s", genRandomString()), testBody)
 					assignBody(mappingToJSON(genTestMapping()))
 				})
 
@@ -774,7 +800,7 @@ var _ = Describe("Mappings", func() {
 				})
 
 				It("should have a meta status of Not Found", func() {
-					Expect(getMetaStatus).To(Equal("Not Found"))
+					Expect(getMetaStatus()).To(Equal("Not Found"))
 				})
 
 				verifyNoContentsHash()
@@ -790,7 +816,7 @@ var _ = Describe("Mappings", func() {
 			Context("When there are mappings, but none with that name", func() {
 				const numMappings = 150
 				BeforeEach(func() {
-					origName = genRandomString()
+					testRequest = httptest.NewRequest("PUT", fmt.Sprintf("/v1/mappings/%s", genRandomString()), testBody)
 					for i := 0; i < numMappings; i++ {
 						err = store.AddMapping(genTestMapping())
 						Expect(err).NotTo(HaveOccurred())
@@ -815,17 +841,108 @@ var _ = Describe("Mappings", func() {
 					Expect(size).To(Equal(numMappings))
 				})
 			})
+
 		})
 
 	})
 
 	Describe("DeleteMapping", func() {
+		var targetMapping store.Mapping
 		BeforeEach(func() {
+			targetMapping = genTestMapping()
+			testRequest = httptest.NewRequest("DELETE", fmt.Sprintf("/v1/mappings/%s", targetMapping.Name), nil)
+		})
+
+		Context("When the mapping to delete is in the store", func() {
+			BeforeEach(func() {
+				err = store.AddMapping(targetMapping)
+				Expect(err).NotTo(HaveOccurred())
+			})
+
+			var assertDeleteSuccess = func() {
+				It("should have a return code of 200", func() {
+					Expect(testResponse.Code).To(Equal(http.StatusOK))
+				})
+
+				It("should have a meta status of OK", func() {
+					Expect(getMetaStatus()).To(Equal("OK"))
+				})
+
+				It("the mapping should not be present in the store anymore", func() {
+					_, err = store.GetMapping(targetMapping.Name)
+					Expect(err).To(Equal(store.ErrNotFound))
+				})
+			}
+
+			Context("and its the only thing in the store", func() {
+				assertDeleteSuccess()
+			})
+
+			Context("and there are a bunch of things in the store", func() {
+				const numMappings = 150
+				BeforeEach(func() {
+					for i := 0; i < numMappings-1; i++ {
+						err = store.AddMapping(genTestMapping())
+						Expect(err).NotTo(HaveOccurred())
+					}
+				})
+
+				assertDeleteSuccess()
+			})
+		})
+
+		Context("When the mapping to delete is missing from the store", func() {
+			var assertDeleteFailure = func() {
+				It("should have a return code of 404", func() {
+					Expect(testResponse.Code).To(Equal(http.StatusNotFound))
+				})
+
+				It("should have a meta status of Not Found", func() {
+					Expect(getMetaStatus()).To(Equal("Not Found"))
+				})
+
+				It("the mapping should not be present in the store", func() {
+					_, err = store.GetMapping(targetMapping.Name)
+					Expect(err).To(Equal(store.ErrNotFound))
+				})
+			}
+			Context("Because the store is empty", func() {
+				assertDeleteFailure()
+			})
+
+			Context("Even with other things in the store", func() {
+				const numMappings = 150
+				BeforeEach(func() {
+					for i := 0; i < numMappings-1; i++ {
+						err = store.AddMapping(genTestMapping())
+						Expect(err).NotTo(HaveOccurred())
+					}
+				})
+				assertDeleteFailure()
+			})
+
+			Context("When the given name is the empty string", func() {
+				BeforeEach(func() {
+					testRequest = httptest.NewRequest("DELETE", "/v1/mappings/", nil)
+				})
+
+				assertDeleteFailure()
+			})
 		})
 
 	})
 
 	Describe("Route Not Found", func() {
+		BeforeEach(func() {
+			testRequest = httptest.NewRequest("GET", "/somerandomroute", nil)
+		})
 
+		It("should have a return code of 404", func() {
+			Expect(testResponse.Code).To(Equal(http.StatusNotFound))
+		})
+
+		It("should have a meta status of Not Found", func() {
+			Expect(getMetaStatus()).To(Equal("Not Found"))
+		})
 	})
 })
