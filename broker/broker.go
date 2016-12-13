@@ -27,13 +27,15 @@ func Initialize(conf config.BrokerConfig) (err error) {
 	port = conf.Port
 
 	router = mux.NewRouter()
-	router.HandleFunc("{broker}/v2/catalog", Passthrough).Methods("GET")
-	router.HandleFunc("{broker}/v2/service_instances/{id}/last_operation", Passthrough).Methods("GET")
-	router.HandleFunc("{broker}/v2/service_instances/{id}", Passthrough).Methods("PUT", "PATCH", "DELETE")
+	router.HandleFunc("/{broker}/v2/catalog", Passthrough).Methods("GET")
+	router.HandleFunc("/{broker}/v2/service_instances/{id}/last_operation", Passthrough).Methods("GET")
+	router.HandleFunc("/{broker}/v2/service_instances/{id}", Passthrough).Methods("PUT", "PATCH", "DELETE")
 	//Bind service instance
-	router.HandleFunc("{broker}/v2/service_instances/{inst_id}/service_bindings/{bind_id}", Placeholder).Methods("PUT")
+	router.HandleFunc("/{broker}/v2/service_instances/{inst_id}/service_bindings/{bind_id}", Placeholder).Methods("PUT")
 	//Unbind service instance
-	router.HandleFunc("{broker}/v2/service_instances/{inst_id}/service_bindings/{bind_id}", Placeholder).Methods("DELETE")
+	router.HandleFunc("/{broker}/v2/service_instances/{inst_id}/service_bindings/{bind_id}", Placeholder).Methods("DELETE")
+
+	router.NotFoundHandler = brokerNotFoundHandler{}
 
 	return nil
 }
@@ -74,4 +76,11 @@ func errorify(desc string) (body []byte) {
 		panic(fmt.Sprintf("Could not marshal response in Broker: %+v", brokerError{Description: desc}))
 	}
 	return
+}
+
+type brokerNotFoundHandler struct{}
+
+func (b brokerNotFoundHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotFound)
+	w.Write(errorify(fmt.Sprintf("Unrecognized route: %s", r.URL)))
 }

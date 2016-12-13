@@ -7,6 +7,8 @@ import (
 
 	"net/http/httputil"
 
+	"strings"
+
 	"github.com/cloudfoundry-community/portcullis/store"
 	"github.com/gorilla/mux"
 )
@@ -24,18 +26,36 @@ func Passthrough(w http.ResponseWriter, r *http.Request) {
 	if n, found := mux.Vars(r)["broker"]; found {
 		mappingName = n
 	}
+	proxy, statuscode, err := preparePassthrough(mappingName, r)
+	if err != nil {
+		w.WriteHeader(statuscode)
+		w.Write([]byte(err.Error()))
+		return
+	}
+	proxy.ServeHTTP(w, r)
+}
+
+//preparePassthrough does the lookup of the mapping and sets up the request and
+// and a proxy object to route requests through to the mapped endpoint
+func preparePassthrough(mappingName string, r *http.Request) (proxy *httputil.ReverseProxy, statuscode int, err error) {
 	brokerMapping, err := store.GetMapping(mappingName)
 	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		w.Write(errorify(fmt.Sprintf("Portcullis: Unrecognized Broker Route `%s`", mappingName)))
-		return
+		return nil, http.StatusBadRequest, fmt.Errorf("Portcullis: Unrecognized Broker Route `%s`", mappingName)
 	}
-	url, err := url.Parse(brokerMapping.Location)
+	//Create the base URL that requests get proxied forward to. This is where
+	// the request will be sent, and so it shouldn't have the endpoint - thats for
+	// the request object
+	baseURL, err := url.Parse(brokerMapping.Location)
 	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		w.Write(errorify(fmt.Sprintf("Portcullis: Mapping location cannot be parsed as URL")))
-		return
+		return nil, http.StatusInternalServerError, fmt.Errorf(fmt.Sprintf("Portcullis: Mapping location cannot be parsed as URL"))
 	}
-	proxy := httputil.NewSingleHostReverseProxy(url)
-	proxy.ServeHTTP(w, r)
+	//Create the request url and strip off the broker name from the endpoint path.
+	// This is for the request object and will affect the brokers internal routing
+	url, err := url.Parse(fmt.Sprintf("%s%s", brokerMapping.Location, strings.TrimPrefix(r.URL.Path, fmt.Sprintf("/%s", mappingName))))
+	if err != nil {
+		return nil, http.StatusInternalServerError, fmt.Errorf(fmt.Sprintf("Portcullis: Mapping location cannot be parsed as URL"))
+	}
+	proxy = httputil.NewSingleHostReverseProxy(baseURL)
+	r.URL = url
+	return proxy, http.StatusOK, nil
 }
