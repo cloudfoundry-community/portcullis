@@ -1,6 +1,7 @@
 package broker
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/http"
 
@@ -26,10 +27,12 @@ func Initialize(conf config.BrokerConfig) (err error) {
 	port = conf.Port
 
 	router = mux.NewRouter()
-	router.HandleFunc("{broker}/v2/catalog", Placeholder).Methods("GET")
-	router.HandleFunc("{broker}/v2/service_instances/{id}/last_operation", Placeholder).Methods("GET")
-	router.HandleFunc("{broker}/v2/service_instances/{id}", Placeholder).Methods("PUT", "PATCH", "DELETE")
+	router.HandleFunc("{broker}/v2/catalog", Passthrough).Methods("GET")
+	router.HandleFunc("{broker}/v2/service_instances/{id}/last_operation", Passthrough).Methods("GET")
+	router.HandleFunc("{broker}/v2/service_instances/{id}", Passthrough).Methods("PUT", "PATCH", "DELETE")
+	//Bind service instance
 	router.HandleFunc("{broker}/v2/service_instances/{inst_id}/service_bindings/{bind_id}", Placeholder).Methods("PUT")
+	//Unbind service instance
 	router.HandleFunc("{broker}/v2/service_instances/{inst_id}/service_bindings/{bind_id}", Placeholder).Methods("DELETE")
 
 	return nil
@@ -55,5 +58,20 @@ func Launch(e chan<- error) {
 	log.Infof("Broker listening on port %d", port)
 	e <- http.ListenAndServe(fmt.Sprintf(":%d", port), router)
 
+	return
+}
+
+type brokerError struct {
+	Description string `json:"description"`
+}
+
+func errorify(desc string) (body []byte) {
+	var err error
+	body, err = json.Marshal(brokerError{Description: desc})
+	if err != nil {
+		//This API facing panic makes me uneasy. May switch to logging an error
+		// at a later time and returning a pre-baked response
+		panic(fmt.Sprintf("Could not marshal response in Broker: %+v", brokerError{Description: desc}))
+	}
 	return
 }
