@@ -2,6 +2,7 @@ package broker
 
 import (
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	"net/url"
 
@@ -11,10 +12,19 @@ import (
 
 	"github.com/cloudfoundry-community/portcullis/store"
 	"github.com/gorilla/mux"
+	"github.com/starkandwayne/goutils/log"
 )
 
 //Placeholder holds place so the compiler stops yelling at me
 func Placeholder(w http.ResponseWriter, r *http.Request) {
+	log.Debugf("Method: %s", r.Method)
+	log.Debugf("URL: %s", r.URL.String())
+	bodyContents, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte("Couldn't read the body of the request"))
+	}
+	log.Debugf("Body: %s", string(bodyContents))
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
