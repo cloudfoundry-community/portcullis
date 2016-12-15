@@ -60,7 +60,7 @@ func (d Dummy) getDest(creds map[string]interface{}) (string, error) {
 	if !isAString {
 		return "", fmt.Errorf("`host` key in broker credentials JSON was not of type string")
 	}
-	if !isIPAddress(destAsString) {
+	if !IsIPAddress(destAsString) {
 		return "", fmt.Errorf("`host` key is not a valid IP address")
 	}
 	return destAsString, nil
@@ -75,7 +75,7 @@ func (d Dummy) getPort(creds map[string]interface{}) (int, error) {
 	if !isAnInt {
 		return 0, fmt.Errorf("`port` key in broker credentials JSON was not of type int")
 	}
-	if !isPort(portAsInt) {
+	if !IsPort(portAsInt) {
 		return 0, fmt.Errorf("`port` key in broker credentials JSON is not a valid port number")
 	}
 	return portAsInt, nil
