@@ -12,6 +12,7 @@ import (
 
 	"encoding/json"
 
+	"github.com/cloudfoundry-community/portcullis/broker/bindparser"
 	"github.com/cloudfoundry-community/portcullis/store"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -76,9 +77,11 @@ var _ = Describe("Mappings", func() {
 	}
 
 	var getMetaWarning = func() string {
-		warning, ok := unmarshalledResponse["meta"].(map[string]interface{})["warning"].(string)
-		Expect(ok).To(BeTrue())
-		return warning
+		warning, found := unmarshalledResponse["meta"].(map[string]interface{})["warning"]
+		if !found {
+			warning = ""
+		}
+		return warning.(string)
 	}
 
 	var mappingToJSON = func(m store.Mapping) (j []byte) {
@@ -346,6 +349,10 @@ var _ = Describe("Mappings", func() {
 				Expect(getMetaStatus()).To(Equal("OK"))
 			})
 
+			It("should not have any warnings", func() {
+				Expect(getMetaWarning()).To(BeEmpty())
+			})
+
 			verifyNoContentsHash()
 
 			Specify("The mapping should be present in the store", func() {
@@ -456,6 +463,139 @@ var _ = Describe("Mappings", func() {
 				_, err = store.GetMapping(testMapping.Name)
 				Expect(err).To(Equal(store.ErrNotFound))
 			})
+		})
+
+		Context("For a request body with no bind_config field", func() {
+			var testMapping store.Mapping
+			BeforeEach(func() {
+				testMapping = genTestMapping()
+				assignBody(mappingToJSONWithout("bind_config", testMapping))
+			})
+			It("should have a return code of 400", func() {
+				Expect(testResponse.Code).To(Equal(http.StatusBadRequest))
+			})
+
+			It("should have a meta status of error", func() {
+				Expect(getMetaStatus()).To(Equal("Error"))
+			})
+
+			verifyNoContentsHash()
+
+			Specify("no mapping with that name should exist in the backend store", func() {
+				_, err = store.GetMapping(testMapping.Name)
+				Expect(err).To(Equal(store.ErrNotFound))
+			})
+		})
+
+		Context("For a request body whose bind_config.flavor is missing", func() {
+			var testMapping store.Mapping
+			BeforeEach(func() {
+				testMapping = genTestMapping()
+				testMap, err := testMapping.ToMap()
+				Expect(err).NotTo(HaveOccurred())
+				delete(testMap["bind_config"].(map[string]interface{}), "flavor")
+				j, err := json.Marshal(testMap)
+				Expect(err).NotTo(HaveOccurred())
+				assignBody(j)
+			})
+
+			It("should have a return code of 400", func() {
+				Expect(testResponse.Code).To(Equal(http.StatusBadRequest))
+			})
+
+			It("should have a meta status of error", func() {
+				Expect(getMetaStatus()).To(Equal("Error"))
+			})
+
+			verifyNoContentsHash()
+
+			Specify("no mapping with that name should exist in the backend store", func() {
+				_, err = store.GetMapping(testMapping.Name)
+				Expect(err).To(Equal(store.ErrNotFound))
+			})
+		})
+
+		Context("For a request body whose bind_config.flavor is not a known flavor", func() {
+			var testMapping store.Mapping
+			BeforeEach(func() {
+				testMapping = genTestMapping().WithConfig(bindparser.Config{
+					FlavorName: "gobbledegook",
+					Config:     testMapping.BindConfig.Config,
+				})
+				assignBody(mappingToJSON(testMapping))
+			})
+
+			It("should have a return code of 400", func() {
+				Expect(testResponse.Code).To(Equal(http.StatusBadRequest))
+			})
+
+			It("should have a meta status of error", func() {
+				Expect(getMetaStatus()).To(Equal("Error"))
+			})
+
+			verifyNoContentsHash()
+
+			Specify("no mapping with that name should exist in the backend store", func() {
+				_, err = store.GetMapping(testMapping.Name)
+				Expect(err).To(Equal(store.ErrNotFound))
+			})
+
+		})
+
+		Context("For a request body whose bind_config.config is missing", func() {
+			var testMapping store.Mapping
+			BeforeEach(func() {
+				testMapping = genTestMapping()
+				testMap, err := testMapping.ToMap()
+				Expect(err).NotTo(HaveOccurred())
+				delete(testMap["bind_config"].(map[string]interface{}), "config")
+				j, err := json.Marshal(testMap)
+				Expect(err).NotTo(HaveOccurred())
+				assignBody(j)
+			})
+			It("should have a return code of 400", func() {
+				Expect(testResponse.Code).To(Equal(http.StatusBadRequest))
+			})
+
+			It("should have a meta status of error", func() {
+				Expect(getMetaStatus()).To(Equal("Error"))
+			})
+
+			verifyNoContentsHash()
+
+			Specify("no mapping with that name should exist in the backend store", func() {
+				_, err = store.GetMapping(testMapping.Name)
+				Expect(err).To(Equal(store.ErrNotFound))
+			})
+		})
+
+		Context("For a request body whose bind_config.config is not valid", func() {
+			var testMapping store.Mapping
+			BeforeEach(func() {
+				testMapping = genTestMapping().WithConfig(bindparser.Config{
+					FlavorName: "dummy",
+					Config: map[string]interface{}{
+						"confirm": false,
+					},
+				})
+				assignBody(mappingToJSON(testMapping))
+			})
+
+			It("should have a return code of 400", func() {
+				Expect(testResponse.Code).To(Equal(http.StatusBadRequest))
+			})
+
+			It("should have a meta status of error", func() {
+				Expect(getMetaStatus()).To(Equal("Error"))
+			})
+
+			verifyNoContentsHash()
+
+			Specify("no mapping with that name should exist in the backend store", func() {
+				_, err = store.GetMapping(testMapping.Name)
+				Expect(err).To(Equal(store.ErrNotFound))
+			})
+
 		})
 
 		Context("For a request body with extraneous fields", func() {
@@ -578,6 +718,10 @@ var _ = Describe("Mappings", func() {
 					Expect(m).To(Equal(mappingToEdit))
 				})
 
+				It("should not have any warnings", func() {
+					Expect(getMetaWarning()).To(BeEmpty())
+				})
+
 				Context("But that name is already taken by a different mapping", func() {
 					BeforeEach(func() {
 						Expect(store.AddMapping(genTestMapping().WithName(mappingToEdit.Name))).To(Succeed())
@@ -698,6 +842,91 @@ var _ = Describe("Mappings", func() {
 						Expect(m).To(Equal(origMapping))
 					})
 				})
+
+				Context("For a request body whose bind_config.flavor is missing", func() {
+					var testMapping store.Mapping
+					BeforeEach(func() {
+						testMapping = genTestMapping()
+						testMap, err := testMapping.ToMap()
+						Expect(err).NotTo(HaveOccurred())
+						delete(testMap["bind_config"].(map[string]interface{}), "flavor")
+						j, err := json.Marshal(testMap)
+						Expect(err).NotTo(HaveOccurred())
+						assignBody(j)
+					})
+
+					It("should have a return code of 400", func() {
+						Expect(testResponse.Code).To(Equal(http.StatusBadRequest))
+					})
+
+					It("should have a meta status of error", func() {
+						Expect(getMetaStatus()).To(Equal("Error"))
+					})
+
+					verifyNoContentsHash()
+
+					Specify("no mapping with that name should exist in the backend store", func() {
+						_, err = store.GetMapping(testMapping.Name)
+						Expect(err).To(Equal(store.ErrNotFound))
+					})
+				})
+
+				Context("For a request body whose bind_config.flavor is not a known flavor", func() {
+					var testMapping store.Mapping
+					BeforeEach(func() {
+						testMapping = genTestMapping().WithConfig(bindparser.Config{
+							FlavorName: "gobbledegook",
+							Config:     testMapping.BindConfig.Config,
+						})
+						assignBody(mappingToJSON(testMapping))
+					})
+
+					It("should have a return code of 400", func() {
+						Expect(testResponse.Code).To(Equal(http.StatusBadRequest))
+					})
+
+					It("should have a meta status of error", func() {
+						Expect(getMetaStatus()).To(Equal("Error"))
+					})
+
+					verifyNoContentsHash()
+
+					Specify("no mapping with that name should exist in the backend store", func() {
+						_, err = store.GetMapping(testMapping.Name)
+						Expect(err).To(Equal(store.ErrNotFound))
+					})
+
+				})
+
+				Context("For a request body whose bind_config.config is not valid", func() {
+					var testMapping store.Mapping
+					BeforeEach(func() {
+						testMapping = genTestMapping().WithConfig(bindparser.Config{
+							FlavorName: "dummy",
+							Config: map[string]interface{}{
+								"confirm": false,
+							},
+						})
+						assignBody(mappingToJSON(testMapping))
+					})
+
+					It("should have a return code of 400", func() {
+						Expect(testResponse.Code).To(Equal(http.StatusBadRequest))
+					})
+
+					It("should have a meta status of error", func() {
+						Expect(getMetaStatus()).To(Equal("Error"))
+					})
+
+					verifyNoContentsHash()
+
+					Specify("no mapping with that name should exist in the backend store", func() {
+						_, err = store.GetMapping(testMapping.Name)
+						Expect(err).To(Equal(store.ErrNotFound))
+					})
+
+				})
+
 			})
 
 			Describe("Default behaviors", func() {

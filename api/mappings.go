@@ -159,7 +159,9 @@ func createMappingHelper(r *http.Request) (returnCode int, message, warning stri
 				fmt.Sprintf("There already exists a mapping in the store with the given name: `%s`", mapping.Name),
 				warning
 		}
-		//TODO: Another case will be needed here when mapping constraints are implemented
+		if store.IsErrInvalid(err) {
+			return http.StatusBadRequest, err.Error(), warning
+		}
 		return http.StatusInternalServerError,
 			"Encountered an error while contacting the backend store",
 			warning
@@ -267,8 +269,9 @@ func editMappingHelper(name string, r *http.Request) (returnCode int, message, w
 			return http.StatusConflict,
 				fmt.Sprintf("There is already a mapping with the name that the edit was requested to take: %s", origMapping.Name),
 				warning
+		} else if store.IsErrInvalid(err) {
+			return http.StatusBadRequest, err.Error(), warning
 		}
-		//TODO: Another case will be needed here when mapping constraints are implemented
 		return http.StatusInternalServerError,
 			"Encountered an error while contacting the backend store",
 			warning
@@ -306,7 +309,12 @@ func deleteMappingHelper(name string) (returnCode int, message string) {
 }
 
 func isMappingField(key string) bool {
-	return key == "name" || key == "location"
+	for _, field := range store.MappingFields {
+		if key == field {
+			return true
+		}
+	}
+	return false
 }
 
 func missingRequiredFields(m map[string]interface{}) (missing []string) {

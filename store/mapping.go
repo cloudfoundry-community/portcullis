@@ -13,18 +13,26 @@ type Mapping struct {
 
 //MappingFields is an array of all the top-level fields in a JSON object
 // representing a Mapping that are understood by the program
-var MappingFields = [2]string{"name", "location"}
+var MappingFields = [3]string{"name", "location", "bind_config"}
 
 //RequiredMappingFields is an array of all the top-level fields in a JSON object
 // representing a Mapping in order for there to be enough information for the
 // program to use the Mapping
-var RequiredMappingFields = [2]string{"name", "location"}
+var RequiredMappingFields = [3]string{"name", "location", "bind_config"}
 
 //WithName generates a new Mapping with all the properties of the target Mapping,
 // except with the given name
 func (m Mapping) WithName(name string) Mapping {
 	ret := m
 	ret.Name = name
+	return ret
+}
+
+//WithConfig generates a new Mapping with all the properties of the target Mapping,
+// except with the given config
+func (m Mapping) WithConfig(config bindparser.Config) Mapping {
+	ret := m
+	ret.BindConfig = config
 	return ret
 }
 
