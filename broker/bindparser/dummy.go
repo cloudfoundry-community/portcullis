@@ -14,7 +14,12 @@ import (
 type Dummy struct {
 	//Confirm, to make sure that you REALLY want to use this debugging implementation
 	// for whatever it is you're doing
-	Confirm bool `json:"confirm"`
+	Confirm bool `json:"confirm",yaml:"confirm"`
+}
+
+//NewDummy creates a new Dummy flavor object
+func NewDummy() Flavor {
+	return &Dummy{}
 }
 
 //Verify checks the provided config to make sure you really want to use this

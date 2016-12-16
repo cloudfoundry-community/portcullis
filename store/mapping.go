@@ -1,13 +1,14 @@
 package store
 
 import "encoding/json"
+import "github.com/cloudfoundry-community/portcullis/broker/bindparser"
 
 //Mapping represents a mapping between a service broker name and a service
 //broker backend, as well as the configuration details of how to work with it
 type Mapping struct {
-	Name     string `json:"name"`
-	Location string `json:"location"`
-	//TODO
+	Name       string            `json:"name"`
+	Location   string            `json:"location"`
+	BindConfig bindparser.Config `json:"bind_config"`
 }
 
 //MappingFields is an array of all the top-level fields in a JSON object

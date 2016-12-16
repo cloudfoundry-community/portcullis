@@ -16,3 +16,5 @@ type Flavor interface {
 	// implementation.
 	Rule(creds map[string]interface{}) (cfclient.SecGroupRule, error)
 }
+
+type flavorMaker func() Flavor

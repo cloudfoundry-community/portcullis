@@ -14,6 +14,7 @@ import (
 
 	"math/rand"
 
+	"github.com/cloudfoundry-community/portcullis/broker/bindparser"
 	"github.com/cloudfoundry-community/portcullis/config"
 	"github.com/cloudfoundry-community/portcullis/store"
 	_ "github.com/cloudfoundry-community/portcullis/store/dummy"
@@ -89,5 +90,11 @@ func genTestMapping() store.Mapping {
 	return store.Mapping{
 		Name:     genRandomString(),
 		Location: genRandomString(),
+		BindConfig: bindparser.Config{
+			FlavorName: "dummy",
+			Config: map[string]interface{}{
+				"confirm": true,
+			},
+		},
 	}
 }

@@ -89,8 +89,12 @@ func AddMapping(m Mapping) error {
 	//TODO: Create and enforce restrictions on mapping fields
 	//  Make sure name is proper length/content
 	//  Make sure location is parseable as a URL
-	return activeStore.AddMapping(m)
 
+	err := m.BindConfig.VerifyFlavor()
+	if err != nil {
+		return NewErrInvalid(err.Error())
+	}
+	return activeStore.AddMapping(m)
 }
 
 //EditMapping edits the mapping with the name in the given Mapping to
@@ -100,6 +104,11 @@ func AddMapping(m Mapping) error {
 //exists in the store.
 func EditMapping(name string, m Mapping) error {
 	//TODO: See restriction checking for AddMapping
+	err := m.BindConfig.VerifyFlavor()
+	if err != nil {
+		return NewErrInvalid(err.Error())
+	}
+
 	return activeStore.EditMapping(name, m)
 }
 

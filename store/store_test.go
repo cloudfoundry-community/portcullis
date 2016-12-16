@@ -442,7 +442,7 @@ var _ = Describe("Store", func() {
 
 			Context("on a mapping that does not exist", func() {
 				BeforeEach(func() {
-					editedMapping = Mapping{Name: "Not_Added"}
+					editedMapping = genTestMapping().WithName("Not_Added")
 				})
 
 				It("should return an error", func() {
