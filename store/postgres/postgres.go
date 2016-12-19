@@ -154,14 +154,14 @@ func (p *Postgres) ListMappings() ([]store.Mapping, error) {
 			return []store.Mapping{}, err
 		}
 
-		var bp bindparser.Config
+		var bc bindparser.Config
 
-		if err := json.Unmarshal([]byte(mappingConfig), &bp); err != nil {
+		if err := json.Unmarshal([]byte(mappingConfig), &bc); err != nil {
 			log.Infof("Scan error attempting to retrieve row with name: %s, cloud not unmarshal config %s", name, err.Error())
 		}
 
 		log.Debugf("Found row: %s, %s", name, location)
-		ret = append(ret, store.Mapping{Name: name, Location: location, BindConfig: bp})
+		ret = append(ret, store.Mapping{Name: name, Location: location, BindConfig: bc})
 	}
 
 	return ret, err
@@ -186,9 +186,9 @@ func (p *Postgres) GetMapping(name string) (store.Mapping, error) {
 		return ret, err
 	}
 
-	var bp bindparser.Config
+	var bc bindparser.Config
 
-	if err := json.Unmarshal([]byte(mappingConfig), &bp); err != nil {
+	if err := json.Unmarshal([]byte(mappingConfig), &bc); err != nil {
 		log.Infof("Scan error attempting to retrieve row with name: %s, cloud not unmarshal config %s", name, err.Error())
 	}
 
@@ -196,7 +196,7 @@ func (p *Postgres) GetMapping(name string) (store.Mapping, error) {
 	retMapping := store.Mapping{
 		Name:     mappingName,
 		Location: location,
-		BindConfig: bp,
+		BindConfig: bc,
 	}
 
 	return retMapping, err
