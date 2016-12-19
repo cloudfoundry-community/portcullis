@@ -13,6 +13,10 @@ import (
 	"database/sql"
 	"fmt"
 
+	"encoding/json"
+
+	"github.com/cloudfoundry-community/portcullis/broker/bindparser"
+
 	"github.com/cloudfoundry-community/portcullis/config"
 	"github.com/cloudfoundry-community/portcullis/store"
 	"github.com/lib/pq"
@@ -132,24 +136,32 @@ func (p *Postgres) Initialize(conf map[string]interface{}) error {
 	return nil
 }
 
+
 //ListMappings returns the list of all mappings stored in the Postgres database
 func (p *Postgres) ListMappings() ([]store.Mapping, error) {
 	log.Debugf("Attempting to retrieve all rows from mappings table...")
-	rows, err := p.connection.Query("SELECT name, location FROM mappings")
+	rows, err := p.connection.Query("SELECT name, location, config FROM mappings")
 	if err != nil {
 		log.Infof("Scan error attempting to retrieve all rows from mapping")
 		return []store.Mapping{}, err
 	}
 	ret := []store.Mapping{}
 	for rows.Next() {
-		var name, location string
-		err := rows.Scan(&name, &location)
+		var name, location, mappingConfig string
+		err := rows.Scan(&name, &location, &mappingConfig)
 		if err != nil {
 			log.Infof("Scan error attempting to retrieve all rows from mapping")
 			return []store.Mapping{}, err
 		}
+
+		var bp bindparser.Config
+
+		if err := json.Unmarshal([]byte(mappingConfig), &bp); err != nil {
+			log.Infof("Scan error attempting to retrieve row with name: %s, cloud not unmarshal config %s", name, err.Error())
+		}
+
 		log.Debugf("Found row: %s, %s", name, location)
-		ret = append(ret, store.Mapping{Name: name, Location: location})
+		ret = append(ret, store.Mapping{Name: name, Location: location, BindConfig: bp})
 	}
 
 	return ret, err
@@ -161,9 +173,9 @@ func (p *Postgres) GetMapping(name string) (store.Mapping, error) {
 	log.Debugf("Attempting to get a row from the mappings table...")
 
 	ret := store.Mapping{}
-	var mappingName, location string
+	var mappingName, location, mappingConfig string
 
-	err := p.connection.QueryRow("SELECT name, location FROM mappings WHERE name = $1", name).Scan(&mappingName, &location)
+	err := p.connection.QueryRow("SELECT name, location, config FROM mappings WHERE name = $1", name).Scan(&mappingName, &location, &mappingConfig)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			log.Infof("No rows found while attempting to retrieve row with name: %s", name)
@@ -174,10 +186,17 @@ func (p *Postgres) GetMapping(name string) (store.Mapping, error) {
 		return ret, err
 	}
 
+	var bp bindparser.Config
+
+	if err := json.Unmarshal([]byte(mappingConfig), &bp); err != nil {
+		log.Infof("Scan error attempting to retrieve row with name: %s, cloud not unmarshal config %s", name, err.Error())
+	}
+
 	log.Debugf("Found row with name:%s and location: %s", mappingName, location)
 	retMapping := store.Mapping{
 		Name:     mappingName,
 		Location: location,
+		BindConfig: bp,
 	}
 
 	return retMapping, err
@@ -189,7 +208,9 @@ func (p *Postgres) AddMapping(m store.Mapping) error {
 
 	log.Debugf("Attempting to add a row into mappings table...")
 
-	_, err := p.connection.Exec(`INSERT INTO mappings (name, location) VALUES ($1, $2)`, m.Name, m.Location)
+	bc, _ := json.Marshal(m.BindConfig)
+
+	_, err := p.connection.Exec(`INSERT INTO mappings (name, location, config) VALUES ($1, $2, $3)`, m.Name, m.Location, string(bc))
 	if err != nil {
 		if err.(*pq.Error).Code == "23505" {
 			log.Infof("Could not insert into %s table, duplicate row: %s", mappingsTable, err.Error())
@@ -218,7 +239,9 @@ func (p *Postgres) EditMapping(name string, m store.Mapping) error {
 		return store.ErrNotFound
 	}
 
-	_, err = p.connection.Exec(`UPDATE mappings SET name = $1, location = $2 WHERE name = $3`, m.Name, m.Location, name)
+	bc, _ := json.Marshal(m.BindConfig)
+
+	_, err = p.connection.Exec(`UPDATE mappings SET name = $1, location = $2, config = $3 WHERE name = $4`, m.Name, m.Location, string(bc), name)
 
 	if err != nil {
 		if err.(*pq.Error).Code == "23505" {
