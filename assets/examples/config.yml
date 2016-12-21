@@ -8,3 +8,6 @@ api:
     type: none
 broker:
   port: 8238
+  cf_api_address: http://api.bosh-lite.com
+  cf_admin: admin
+  cf_password: admin

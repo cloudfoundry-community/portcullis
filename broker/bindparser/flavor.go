@@ -1,6 +1,11 @@
 package bindparser
 
-import "github.com/cloudfoundry-community/go-cfclient"
+import (
+	"fmt"
+	"strings"
+
+	"github.com/cloudfoundry-community/go-cfclient"
+)
 
 //Flavor represents a way of parsing out the information needed to create a
 // security group from the response body of a bind-service call. The Flavor
@@ -18,3 +23,26 @@ type Flavor interface {
 }
 
 type flavorMaker func() Flavor
+
+//FlavorList is a slice of Flavor instances
+type FlavorList []Flavor
+
+//Rules runs Rule on all the flavors in the list, compiling the results into a slice
+// and all of their errors into a single error object, with the error messages
+// separated by newlines. The error is nil if no flavors return an error.
+// The contents of the rules slice are undefined if an error is returned
+func (f FlavorList) Rules(creds map[string]interface{}) (rules []cfclient.SecGroupRule, retErr error) {
+	var errs []string
+	for _, flavor := range f {
+		rule, err := flavor.Rule(creds)
+		if err != nil {
+			errs = append(errs, err.Error())
+		} else {
+			rules = append(rules, rule)
+		}
+	}
+	if len(errs) > 0 {
+		retErr = fmt.Errorf(strings.Join(errs, "\n"))
+	}
+	return
+}

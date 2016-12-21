@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/cloudfoundry-community/go-cfclient"
 	"github.com/cloudfoundry-community/portcullis/config"
 	"github.com/gorilla/mux"
 	"github.com/starkandwayne/goutils/log"
@@ -13,6 +14,7 @@ import (
 var (
 	port   int
 	router *mux.Router
+	client *cfclient.Client
 )
 
 //Initialize sets up the state of the Broker API to be ready to listen for
@@ -26,6 +28,33 @@ func Initialize(conf config.BrokerConfig) (err error) {
 	}
 	port = conf.Port
 
+	if conf.CFAPIAddress == "" {
+		err = fmt.Errorf("`broker.cf_api_address` is not a valid value in config")
+		log.Errorf(err.Error())
+		return
+	}
+
+	if conf.CFAdmin == "" {
+		err = fmt.Errorf("`broker.cf_admin` is not a valid value in config")
+		log.Errorf(err.Error())
+		return
+	}
+
+	if conf.CFPassword == "" {
+		err = fmt.Errorf("`broker.cf_password` is not a valid value in config")
+		log.Errorf(err.Error())
+		return
+	}
+	cfconfig := cfclient.DefaultConfig()
+	cfconfig.ApiAddress = conf.CFAPIAddress
+	cfconfig.Username = conf.CFAdmin
+	cfconfig.Password = conf.CFPassword
+
+	client, err = cfclient.NewClient(cfconfig)
+	if err != nil {
+		return fmt.Errorf("Error when initially checking CF connection: %s", err.Error())
+	}
+
 	router = mux.NewRouter()
 	router.HandleFunc("/{broker}/v2/catalog", Passthrough).Methods("GET")
 	router.HandleFunc("/{broker}/v2/service_instances/{id}/last_operation", Passthrough).Methods("GET")
@@ -37,7 +66,7 @@ func Initialize(conf config.BrokerConfig) (err error) {
 
 	router.NotFoundHandler = brokerNotFoundHandler{}
 
-	return nil
+	return
 }
 
 //Router returns the routing handler being used for the broker API.
@@ -48,6 +77,11 @@ func Router() http.Handler {
 //Port returns the port number that the Broker API is configured to listen on.
 func Port() int {
 	return port
+}
+
+//CFClient returns the Client object that requests going to Cloud Foundry use
+func CFClient() *cfclient.Client {
+	return client
 }
 
 //Launch starts the API server with the configuration parameters that were set

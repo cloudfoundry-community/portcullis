@@ -32,11 +32,7 @@ func Placeholder(w http.ResponseWriter, r *http.Request) {
 // name given in the URL. It performs a lookup in the store to determine where
 // to forward the request to. The response is then passed back to the caller.
 func Passthrough(w http.ResponseWriter, r *http.Request) {
-	var mappingName string
-	if n, found := mux.Vars(r)["broker"]; found {
-		mappingName = n
-	}
-	proxy, statuscode, err := preparePassthrough(mappingName, r)
+	proxy, statuscode, err := preparePassthrough(r)
 	if err != nil {
 		w.WriteHeader(statuscode)
 		w.Write([]byte(err.Error()))
@@ -47,7 +43,11 @@ func Passthrough(w http.ResponseWriter, r *http.Request) {
 
 //preparePassthrough does the lookup of the mapping and sets up the request and
 // and a proxy object to route requests through to the mapped endpoint
-func preparePassthrough(mappingName string, r *http.Request) (proxy *httputil.ReverseProxy, statuscode int, err error) {
+func preparePassthrough(r *http.Request) (proxy *httputil.ReverseProxy, statuscode int, err error) {
+	var mappingName string
+	if n, found := mux.Vars(r)["broker"]; found {
+		mappingName = n
+	}
 	brokerMapping, err := store.GetMapping(mappingName)
 	if err != nil {
 		return nil, http.StatusBadRequest, fmt.Errorf("Portcullis: Unrecognized Broker Route `%s`", mappingName)
@@ -68,4 +68,18 @@ func preparePassthrough(mappingName string, r *http.Request) (proxy *httputil.Re
 	proxy = httputil.NewSingleHostReverseProxy(baseURL)
 	r.URL = url
 	return proxy, http.StatusOK, nil
+}
+
+//BindService is an HTTP handler which handles the passthrough and parsing of
+// a CF bind-service call.
+func BindService(w http.ResponseWriter, r *http.Request) {
+	proxy, statuscode, err := preparePassthrough(r)
+	if err != nil {
+		w.WriteHeader(statuscode)
+		w.Write([]byte(err.Error()))
+		return
+	}
+	//set transport
+	proxy.Transport = &BindTransport{}
+	proxy.ServeHTTP(w, r)
 }
