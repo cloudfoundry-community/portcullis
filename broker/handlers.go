@@ -10,6 +10,7 @@ import (
 
 	"strings"
 
+	"github.com/cloudfoundry-community/portcullis/broker/bindparser"
 	"github.com/cloudfoundry-community/portcullis/store"
 	"github.com/gorilla/mux"
 	"github.com/starkandwayne/goutils/log"
@@ -32,7 +33,21 @@ func Placeholder(w http.ResponseWriter, r *http.Request) {
 // name given in the URL. It performs a lookup in the store to determine where
 // to forward the request to. The response is then passed back to the caller.
 func Passthrough(w http.ResponseWriter, r *http.Request) {
-	proxy, statuscode, err := preparePassthrough(r)
+	var mappingName string
+	if n, found := mux.Vars(r)["broker"]; found {
+		mappingName = n
+	}
+	brokerMapping, err := store.GetMapping(mappingName)
+	if err != nil {
+		if err == store.ErrNotFound {
+			w.WriteHeader(http.StatusBadRequest)
+			w.Write([]byte(fmt.Sprintf("Portcullis: Unrecognized Broker Route `%s`", mappingName)))
+			return
+		}
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte("Portcullis: Error while contacting backend store"))
+	}
+	proxy, statuscode, err := preparePassthrough(r, brokerMapping)
 	if err != nil {
 		w.WriteHeader(statuscode)
 		w.Write([]byte(err.Error()))
@@ -43,15 +58,7 @@ func Passthrough(w http.ResponseWriter, r *http.Request) {
 
 //preparePassthrough does the lookup of the mapping and sets up the request and
 // and a proxy object to route requests through to the mapped endpoint
-func preparePassthrough(r *http.Request) (proxy *httputil.ReverseProxy, statuscode int, err error) {
-	var mappingName string
-	if n, found := mux.Vars(r)["broker"]; found {
-		mappingName = n
-	}
-	brokerMapping, err := store.GetMapping(mappingName)
-	if err != nil {
-		return nil, http.StatusBadRequest, fmt.Errorf("Portcullis: Unrecognized Broker Route `%s`", mappingName)
-	}
+func preparePassthrough(r *http.Request, brokerMapping store.Mapping) (proxy *httputil.ReverseProxy, statuscode int, err error) {
 	//Create the base URL that requests get proxied forward to. This is where
 	// the request will be sent, and so it shouldn't have the endpoint - thats for
 	// the request object
@@ -61,7 +68,7 @@ func preparePassthrough(r *http.Request) (proxy *httputil.ReverseProxy, statusco
 	}
 	//Create the request url and strip off the broker name from the endpoint path.
 	// This is for the request object and will affect the brokers internal routing
-	url, err := url.Parse(fmt.Sprintf("%s%s", brokerMapping.Location, strings.TrimPrefix(r.URL.Path, fmt.Sprintf("/%s", mappingName))))
+	url, err := url.Parse(fmt.Sprintf("%s%s", brokerMapping.Location, strings.TrimPrefix(r.URL.Path, fmt.Sprintf("/%s", brokerMapping.Name))))
 	if err != nil {
 		return nil, http.StatusInternalServerError, fmt.Errorf(fmt.Sprintf("Portcullis: Mapping location cannot be parsed as URL"))
 	}
@@ -73,13 +80,36 @@ func preparePassthrough(r *http.Request) (proxy *httputil.ReverseProxy, statusco
 //BindService is an HTTP handler which handles the passthrough and parsing of
 // a CF bind-service call.
 func BindService(w http.ResponseWriter, r *http.Request) {
-	proxy, statuscode, err := preparePassthrough(r)
+	var mappingName string
+	if n, found := mux.Vars(r)["broker"]; found {
+		mappingName = n
+	}
+	brokerMapping, err := store.GetMapping(mappingName)
+	if err != nil {
+		if err == store.ErrNotFound {
+			w.WriteHeader(http.StatusBadRequest)
+			w.Write([]byte(fmt.Sprintf("Portcullis: Unrecognized Broker Route `%s`", mappingName)))
+			return
+		}
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte("Portcullis: Error while contacting backend store"))
+	}
+	proxy, statuscode, err := preparePassthrough(r, brokerMapping)
+
 	if err != nil {
 		w.WriteHeader(statuscode)
 		w.Write([]byte(err.Error()))
 		return
 	}
+
+	flavor, err := brokerMapping.BindConfig.CreateFlavor()
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write([]byte(err.Error()))
+	}
 	//set transport
-	proxy.Transport = &BindTransport{}
+	proxy.Transport = &BindTransport{
+		Flavors: []bindparser.Flavor{flavor},
+	}
 	proxy.ServeHTTP(w, r)
 }

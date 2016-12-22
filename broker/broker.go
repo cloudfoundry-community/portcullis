@@ -49,6 +49,8 @@ func Initialize(conf config.BrokerConfig) (err error) {
 	cfconfig.ApiAddress = conf.CFAPIAddress
 	cfconfig.Username = conf.CFAdmin
 	cfconfig.Password = conf.CFPassword
+	//Add config option for SSL Validation
+	cfconfig.SkipSslValidation = true
 
 	client, err = cfclient.NewClient(cfconfig)
 	if err != nil {
@@ -60,9 +62,9 @@ func Initialize(conf config.BrokerConfig) (err error) {
 	router.HandleFunc("/{broker}/v2/service_instances/{id}/last_operation", Passthrough).Methods("GET")
 	router.HandleFunc("/{broker}/v2/service_instances/{id}", Passthrough).Methods("PUT", "PATCH", "DELETE")
 	//Bind service instance
-	router.HandleFunc("/{broker}/v2/service_instances/{inst_id}/service_bindings/{bind_id}", Placeholder).Methods("PUT")
+	router.HandleFunc("/{broker}/v2/service_instances/{inst_id}/service_bindings/{bind_id}", BindService).Methods("PUT")
 	//Unbind service instance
-	router.HandleFunc("/{broker}/v2/service_instances/{inst_id}/service_bindings/{bind_id}", Placeholder).Methods("DELETE")
+	router.HandleFunc("/{broker}/v2/service_instances/{inst_id}/service_bindings/{bind_id}", Passthrough).Methods("DELETE")
 
 	router.NotFoundHandler = brokerNotFoundHandler{}
 

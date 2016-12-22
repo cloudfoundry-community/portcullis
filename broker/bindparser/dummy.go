@@ -2,10 +2,12 @@ package bindparser
 
 import (
 	"fmt"
+	"reflect"
 
 	"strconv"
 
 	"github.com/cloudfoundry-community/go-cfclient"
+	"github.com/starkandwayne/goutils/log"
 )
 
 //Dummy is an implementation of bindparser.Flavor that specifically works with
@@ -76,10 +78,12 @@ func (d Dummy) getPort(creds map[string]interface{}) (int, error) {
 	if !found {
 		return 0, fmt.Errorf("`port` key not found in broker credentials JSON")
 	}
-	portAsInt, isAnInt := port.(int)
+	log.Debugf("Type of port: %s", reflect.TypeOf(port).String())
+	portAsFloat, isAnInt := port.(float64)
 	if !isAnInt {
-		return 0, fmt.Errorf("`port` key in broker credentials JSON was not of type int")
+		return 0, fmt.Errorf("`port` key in broker credentials JSON was not a number")
 	}
+	portAsInt := int(portAsFloat)
 	if !IsPort(portAsInt) {
 		return 0, fmt.Errorf("`port` key in broker credentials JSON is not a valid port number")
 	}
