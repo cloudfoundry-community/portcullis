@@ -42,10 +42,9 @@ type BasicAuth struct {
 // are correct, then the provided HandlerFunc is called.
 //
 // Return codes:
-// 400 - The Authorization type in the header was not Basic
 // 401 - No authorization header was provided, the provided authorization was
-//       not base64 encoded, or the credentials did not match the configured
-//       API credentials
+//       not base64 encoded, the credentials did not match the configured
+//       API credentials, or authorization is of the wrong type.
 func (b *BasicAuth) Auth(h http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, request *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
