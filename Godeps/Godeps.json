@@ -23,6 +23,10 @@
 			"Rev": "d8eeeb8bae8896dd8e1b7e514ab0d396c4f12a1b"
 		},
 		{
+			"ImportPath": "github.com/pborman/uuid",
+			"Rev": "cccd189d45f7ac3368a0d127efb7f4d08ae0b655"
+		},
+		{
 			"ImportPath": "github.com/starkandwayne/goutils/log",
 			"Rev": "fe57c6fbef7b5c329ec574102e36721957822c84"
 		},
