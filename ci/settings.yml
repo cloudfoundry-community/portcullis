@@ -1,0 +1,21 @@
+---
+meta:
+  name: portcullis
+  target: sw
+  url: https://ci.vsphere.starkandwayne.com
+
+  aws:
+    access_key: (( vault "secret/aws/cfcommunity:access" ))
+    secret_key: (( vault "secret/aws/cfcommunity:secret" ))
+
+  github:
+    owner: cloudfoundry-community
+    repo: portcullis
+    access_token: (( vault "secret/pipelines/portcullis/github:token" ))
+    private_key: (( vault "secret/pipelines/portcullis/github:private" ))
+
+  slack:
+    channel: (( vault "secret/pipelines/portcullis/slack:webhook" ))
+    webhook: '#botspam'
+
+  initial_version: 0.1.0
