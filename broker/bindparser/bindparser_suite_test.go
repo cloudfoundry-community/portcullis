@@ -15,5 +15,5 @@ func TestBindparser(t *testing.T) {
 }
 
 var _ = BeforeSuite(func() {
-	log.SetupLogging(log.LogConfig{Type: "console", Level: "debug"})
+	log.SetupLogging(log.LogConfig{Type: "console", Level: "emerg"})
 })
