@@ -18,14 +18,20 @@ var (
 	port   int
 )
 
+//APIVersion is a string representing the current version of the API.
+// Changes to the API package which add/remove API endpoints or alter the
+// request/response signatures of existing endpoints should result in a change
+// to the Minor digit of the version. Other changes (bug fixes, etc) should
+// result in a change to the Patch digit of the version.
+// Major incrementation is reserved for a total rework of the API.
+const APIVersion string = "1.0.0"
+
 //Initialize reads in the AuthConfig
 func Initialize(conf config.APIConfig) (err error) {
 	log.Infof("Initializing API")
 
 	if conf.Port <= 0 {
-		err = fmt.Errorf("`api.port` not set to a valid value in config")
-		log.Errorf(err.Error())
-		return
+		return fmt.Errorf("`api.port` not set to a valid value in config")
 	}
 	port = conf.Port
 
@@ -42,17 +48,19 @@ func Initialize(conf config.APIConfig) (err error) {
 		//Put the creds where we can more readily access them
 		config.ParseMapConfig(config.AuthKey, conf.Auth.Config, auth.(*BasicAuth))
 		if err != nil {
-			err = fmt.Errorf("Unable to parse basic auth configuration: %s", err)
-			return
+			return fmt.Errorf("Unable to parse basic auth configuration: %s", err)
 		}
 
 		//TODO: UAA Auth
 	default:
-		log.Errorf("Unrecognized auth type: %s ; Reconfigure and try again", conf.Auth.Type)
+		return fmt.Errorf("Unrecognized auth type: %s ; Reconfigure and try again", conf.Auth.Type)
 	}
 
 	router = mux.NewRouter()
 	s := router.PathPrefix("/v1").Subrouter()
+	//Info
+	s.HandleFunc("/info", Info).Methods("GET")
+	//Mappings
 	s.HandleFunc("/mappings", auth.Auth(GetMappings)).Methods("GET")
 	s.HandleFunc("/mappings/{name}", auth.Auth(GetMappings)).Methods("GET")
 	s.HandleFunc("/mappings", auth.Auth(CreateMapping)).Methods("POST")
@@ -83,6 +91,7 @@ func SelectedAuth() Authorizer {
 //Launch starts the API server with the configuration parameters that were set
 // up by Initialize
 func Launch(e chan<- error) {
+	log.Infof("Launching API")
 	if port == 0 {
 		panic("Initialize not called")
 	}

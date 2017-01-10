@@ -24,14 +24,7 @@ var _ = Describe("Mappings", func() {
 	var testResponse *httptest.ResponseRecorder
 	var unmarshalledResponse map[string]interface{}
 
-	var readJSONResponse = func() map[string]interface{} {
-		ret := make(map[string]interface{})
-		err := json.Unmarshal(testResponse.Body.Bytes(), &ret)
-		Expect(err).NotTo(HaveOccurred(),
-			"JSON couldn't be unmarshalled: "+testResponse.Body.String())
-		return ret
-	}
-
+	
 	JustBeforeEach(func() {
 		//Set up the proper auth. Assumes initialize works
 		Expect(Initialize(config.APIConfig{
@@ -50,7 +43,7 @@ var _ = Describe("Mappings", func() {
 		//Fire it at the router. Results go to testResponse
 		Router().ServeHTTP(testResponse, testRequest)
 
-		unmarshalledResponse = readJSONResponse()
+		unmarshalledResponse = readJSONResponse(testResponse)
 	})
 
 	AfterEach(func() {

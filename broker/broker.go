@@ -89,6 +89,7 @@ func CFClient() *cfclient.Client {
 //Launch starts the API server with the configuration parameters that were set
 // up by Initialize
 func Launch(e chan<- error) {
+	log.Infof("Launching Broker")
 	if port == 0 {
 		panic("Broker.Initialize not called")
 	}

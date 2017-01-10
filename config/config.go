@@ -9,6 +9,9 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
+//Version is the version string of this build of Portcullis
+var Version = "(development build)"
+
 //Config is an in-memory representation of the configuration file for Portcullis
 type Config struct {
 	Store  StoreConfig  `yaml:"store"`
@@ -31,4 +34,9 @@ func Load(path string) (c Config, err error) {
 		err = fmt.Errorf("Error while parsing configuration file: %s", err.Error())
 	}
 	return
+}
+
+//^
+func (c Config) setDefaults() {
+	//TODO
 }

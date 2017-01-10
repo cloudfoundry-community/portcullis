@@ -1,8 +1,10 @@
 package api_test
 
 import (
+	"encoding/json"
 	"math/rand"
 	"net/http"
+	"net/http/httptest"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -71,4 +73,12 @@ func genTestMapping() store.Mapping {
 			},
 		},
 	}
+}
+
+func readJSONResponse(testResponse *httptest.ResponseRecorder) map[string]interface{} {
+	ret := make(map[string]interface{})
+	err := json.Unmarshal(testResponse.Body.Bytes(), &ret)
+	Expect(err).NotTo(HaveOccurred(),
+		"JSON couldn't be unmarshalled: "+testResponse.Body.String())
+	return ret
 }

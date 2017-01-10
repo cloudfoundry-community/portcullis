@@ -11,20 +11,38 @@ import (
 
 	_ "github.com/cloudfoundry-community/portcullis/store/dummy"
 	_ "github.com/cloudfoundry-community/portcullis/store/postgres"
+	"gopkg.in/alecthomas/kingpin.v2"
+)
+
+var (
+	cmdLine        = kingpin.New("portcullis", "A server which makes managing your CF service brokers easier").Version("portcullis " + config.Version)
+	configPath     = cmdLine.Flag("config", "The path to the configuration file").Short('c').Default(os.Getenv("PORTCULLIS_CONFIG")).PlaceHolder("/path/to/config").String()
+	skipBrokerFlag = cmdLine.Flag("test-without-broker", "Skip starting the broker server").Hidden().Bool()
 )
 
 func main() {
+	cmdLine.HelpFlag.Short('h')
+	cmdLine.VersionFlag.Short('v')
+	command := kingpin.MustParse(cmdLine.Parse(os.Args[1:]))
+	switch command {
+	case "":
+		initializePortcullis()
+	default:
+		bailWith("Unrecognized command: %s", command)
+	}
+}
+
+func initializePortcullis() {
 	log.SetupLogging(log.LogConfig{
 		Type:  "console",
 		Level: "debug",
 	})
-	configPath := os.Getenv("PORTCULLIS_CONFIG")
 
-	if configPath == "" {
+	if *configPath == "" {
 		bailWith("Please define the configuration file location with the environment variable `PORTCULLIS_CONFIG`")
 	}
 
-	conf, err := config.Load(configPath)
+	conf, err := config.Load(*configPath)
 	if err != nil {
 		bailWith("Error while loading config: %s", err)
 	}
@@ -41,14 +59,27 @@ func main() {
 	if err != nil {
 		bailWith("Error while initializing API server: %s", err)
 	}
-	err = broker.Initialize(conf.Broker)
-	if err != nil {
-		bailWith("Error while initializing Broker server: %s", err)
+
+	if !*skipBrokerFlag {
+		err = broker.Initialize(conf.Broker)
+		if err != nil {
+			bailWith("Error while initializing Broker server: %s", err)
+		}
+	} else {
+		log.Infof("Skipping broker initialization")
 	}
+
 	apiChan := make(chan error)
 	go api.Launch(apiChan)
+
+	//Launch the broker if we should
 	brokerChan := make(chan error)
-	go broker.Launch(brokerChan)
+	if !*skipBrokerFlag {
+		go broker.Launch(brokerChan)
+	} else {
+		log.Infof("Skipping broker launch")
+	}
+
 	select {
 	case err := <-apiChan:
 		bailWith("API Server closed with error: %s", err)

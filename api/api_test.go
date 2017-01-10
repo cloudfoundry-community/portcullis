@@ -30,6 +30,19 @@ var _ = Describe("API", func() {
 				testPort = 5520
 			})
 
+			Context("When an unknown auth type is provided", func() {
+				BeforeEach(func() {
+					testAuthConf = config.AuthConfig{
+						Type:   "gobbledegook",
+						Config: nil,
+					}
+				})
+
+				It("should return an error", func() {
+					Expect(err).To(HaveOccurred())
+				})
+			})
+
 			Describe("NopAuth", func() {
 
 				var testNopAuth = func() {
