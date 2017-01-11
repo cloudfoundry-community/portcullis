@@ -24,7 +24,7 @@ var (
 // to the Minor digit of the version. Other changes (bug fixes, etc) should
 // result in a change to the Patch digit of the version.
 // Major incrementation is reserved for a total rework of the API.
-const APIVersion string = "1.0.0"
+const APIVersion string = "1.1.0"
 
 //Initialize reads in the AuthConfig
 func Initialize(conf config.APIConfig) (err error) {
@@ -55,6 +55,9 @@ func Initialize(conf config.APIConfig) (err error) {
 	default:
 		return fmt.Errorf("Unrecognized auth type: %s ; Reconfigure and try again", conf.Auth.Type)
 	}
+
+	apiDescription = conf.Description
+	initializeInfo()
 
 	router = mux.NewRouter()
 	s := router.PathPrefix("/v1").Subrouter()

@@ -33,10 +33,13 @@ func Load(path string) (c Config, err error) {
 	if err != nil {
 		err = fmt.Errorf("Error while parsing configuration file: %s", err.Error())
 	}
+
+	c.setDefaults()
 	return
 }
 
-//^
-func (c Config) setDefaults() {
-	//TODO
+func (c *Config) setDefaults() {
+	if c.API.Description == "" {
+		c.API.Description = "Portcullis API"
+	}
 }
