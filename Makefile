@@ -24,4 +24,4 @@ test:
 	go test ./api ./broker ./broker/bindparser ./config ./store
 
 coverage: 
-	go test -cover ./api ./broker ./broker/bindparser ./config ./store
+	ginkgo -cover ./api ./broker ./broker/bindparser ./config ./store

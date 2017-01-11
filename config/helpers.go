@@ -14,6 +14,8 @@ const (
 	StoreKey = "store"
 	//AuthKey means error messages should be tailored to auth configs
 	AuthKey = "auth"
+	//TestKey is the key used for test cases
+	TestKey = "test"
 )
 
 //ValidateConfigKeys logs to Warnf if there are keys other than those provided
@@ -82,7 +84,7 @@ func ParseMapConfig(confkey string, conf map[string]interface{}, confStruct inte
 }
 
 func validateConfKey(key string) {
-	if key != StoreKey && key != AuthKey {
+	if key != StoreKey && key != AuthKey && key != TestKey {
 		panic("Unrecognized configuration type!!!!!!")
 	}
 }
