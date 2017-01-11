@@ -21,4 +21,7 @@ clean:
 	rm -f ./portcullis
 
 test:
-	go test ./...
+	go test ./api ./broker ./broker/bindparser ./config ./store
+
+coverage: 
+	go test -cover ./api ./broker ./broker/bindparser ./config ./store
