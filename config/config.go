@@ -34,6 +34,7 @@ func Load(path string) (c Config, err error) {
 	err = yaml.Unmarshal(buffer, &c)
 	if err != nil {
 		err = fmt.Errorf("Error while parsing configuration file: %s", err.Error())
+		return
 	}
 
 	c.setDefaults()

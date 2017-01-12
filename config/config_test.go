@@ -42,7 +42,7 @@ var _ = Describe("Config", func() {
 			})
 
 			It("should return an error", func() {
-				Expect(err).NotTo(BeNil())
+				Expect(err).To(HaveOccurred())
 			})
 		})
 
