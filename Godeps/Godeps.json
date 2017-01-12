@@ -4,6 +4,18 @@
 	"GodepVersion": "v74",
 	"Deps": [
 		{
+			"ImportPath": "github.com/alecthomas/template",
+			"Rev": "a0175ee3bccc567396460bf5acd36800cb10c49c"
+		},
+		{
+			"ImportPath": "github.com/alecthomas/template/parse",
+			"Rev": "a0175ee3bccc567396460bf5acd36800cb10c49c"
+		},
+		{
+			"ImportPath": "github.com/alecthomas/units",
+			"Rev": "2efee857e7cfd4f3d0138cc3cbb1b4966962b93a"
+		},
+		{
 			"ImportPath": "github.com/cloudfoundry-community/go-cfclient",
 			"Rev": "281b53c3fa2872518cabf3293a30a7cacd0fcbcb"
 		},
@@ -45,6 +57,11 @@
 		{
 			"ImportPath": "golang.org/x/oauth2/internal",
 			"Rev": "b5adcc2dcdf009d0391547edc6ecbaff889f5bb9"
+		},
+		{
+			"ImportPath": "gopkg.in/alecthomas/kingpin.v2",
+			"Comment": "v2.1.11",
+			"Rev": "8cccfa8eb2e3183254457fb1749b2667fbc364c7"
 		},
 		{
 			"ImportPath": "gopkg.in/yaml.v2",
