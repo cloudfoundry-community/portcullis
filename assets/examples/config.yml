@@ -11,3 +11,4 @@ broker:
   cf_api_address: http://api.bosh-lite.com
   cf_admin: admin
   cf_password: admin
+log_level: debug

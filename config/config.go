@@ -3,6 +3,7 @@ package config
 import (
 	"fmt"
 	"io/ioutil"
+	"strings"
 
 	"github.com/starkandwayne/goutils/log"
 
@@ -14,9 +15,10 @@ var Version = "(development build)"
 
 //Config is an in-memory representation of the configuration file for Portcullis
 type Config struct {
-	Store  StoreConfig  `yaml:"store"`
-	API    APIConfig    `yaml:"api"`
-	Broker BrokerConfig `yaml:"broker"`
+	Store    StoreConfig  `yaml:"store"`
+	API      APIConfig    `yaml:"api"`
+	Broker   BrokerConfig `yaml:"broker"`
+	LogLevel string       `yaml:"log_level"`
 }
 
 //Load creates and fills out a Config struct from the configuration file
@@ -35,11 +37,36 @@ func Load(path string) (c Config, err error) {
 	}
 
 	c.setDefaults()
+	c.LogLevel = strings.ToLower(c.LogLevel)
+
+	err = c.verifyBaseConfig()
 	return
 }
 
 func (c *Config) setDefaults() {
+	const defaultAPIDescription = "Portcullis API"
+	const defaultLogLevel = "info"
+
 	if c.API.Description == "" {
-		c.API.Description = "Portcullis API"
+		log.Infof("Setting API Description to default: %s", defaultAPIDescription)
+		c.API.Description = defaultAPIDescription
 	}
+
+	if c.LogLevel == "" {
+		log.Infof("Setting Log Level to default: %s", defaultLogLevel)
+		c.LogLevel = defaultLogLevel
+	}
+}
+
+func (c *Config) verifyBaseConfig() error {
+	if !(c.LogLevel == "debug" || c.LogLevel == "info" || c.LogLevel == "warn" ||
+		c.LogLevel == "error" || c.LogLevel == "crit" || c.LogLevel == "off") {
+		return fmt.Errorf("Configured log level was not understood: %s", c.LogLevel)
+	}
+
+	if c.LogLevel == "off" {
+		//We don't use "emerg" level in the program, so this squelches everything
+		c.LogLevel = "emerg"
+	}
+	return nil
 }

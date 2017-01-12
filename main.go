@@ -33,19 +33,28 @@ func main() {
 }
 
 func initializePortcullis() {
+	//Need a default logging endpoint if the program needs to log before the config
+	// can be loaded
 	log.SetupLogging(log.LogConfig{
 		Type:  "console",
 		Level: "debug",
 	})
 
 	if *configPath == "" {
-		bailWith("Please define the configuration file location with the environment variable `PORTCULLIS_CONFIG`")
+		bailWith("Please define the configuration file location with the `-c` flag")
 	}
 
 	conf, err := config.Load(*configPath)
 	if err != nil {
 		bailWith("Error while loading config: %s", err)
 	}
+
+	log.SetupLogging(log.LogConfig{
+		Type:  "console",
+		Level: conf.LogLevel,
+	})
+
+	log.Debugf("Logging settings configured")
 
 	err = store.SetStoreType(conf.Store.Type)
 	if err != nil {
