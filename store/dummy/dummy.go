@@ -18,6 +18,7 @@ import (
 //TODO: Might want to mutex these calls at some point. Stretchiest of goals.
 type Dummy struct {
 	storage     map[string]store.Mapping
+	secgroups   map[string]store.SecGroupInfo
 	initialized bool
 }
 
@@ -151,5 +152,87 @@ func (d *Dummy) ClearMappings() error {
 		return fmt.Errorf("Dummy not initialized")
 	}
 	d.storage = map[string]store.Mapping{}
+	return nil
+}
+
+//GetSecGroupInfoByName returns the SecGroupInfo in the map with that name if it
+// exists and returns ErrNotFound otherwise
+// The map is indexed by ServiceInstanceGUID, not this, so this access takes O(n)
+func (d *Dummy) GetSecGroupInfoByName(name string) (result store.SecGroupInfo, err error) {
+	if !d.initialized {
+		return result, fmt.Errorf("Dummy not initialized")
+	}
+
+	for _, secgroup := range d.secgroups {
+		if secgroup.SecGroupName == name {
+			return secgroup, nil
+		}
+	}
+
+	return result, store.ErrNotFound
+}
+
+//GetSecGroupInfoByInstance returns the SecGroupInfo in the map with the given
+// ServiceInstanceGUID value if it exists, and returns ErrNotFound otherwise.
+func (d *Dummy) GetSecGroupInfoByInstance(GUID string) (result store.SecGroupInfo, err error) {
+	if !d.initialized {
+		return result, fmt.Errorf("Dummy not initialized")
+	}
+
+	if secgroup, ok := d.secgroups[GUID]; ok {
+		return secgroup, nil
+	}
+
+	return result, store.ErrNotFound
+}
+
+//AddSecGroupInfo puts a copy of the given SecGroupInfo object into the map.
+// ErrDuplicate is thrown if a SecGroupInfo with that ServiceInstanceGUID already
+// exists.
+func (d *Dummy) AddSecGroupInfo(toAdd store.SecGroupInfo) error {
+	if !d.initialized {
+		return fmt.Errorf("Dummy not initialized")
+	}
+
+	if _, exists := d.secgroups[toAdd.ServiceInstanceGUID]; exists {
+		return store.ErrDuplicate
+	}
+
+	d.secgroups[toAdd.ServiceInstanceGUID] = toAdd
+
+	return nil
+}
+
+//DeleteSecGroupInfoByInstance finds the SecGroupInfo object in the map with the
+// given ServiceInstanceGUID and then, if it exists, it removes it from the map.
+// Otherwise, it returns ErrNotFound
+func (d *Dummy) DeleteSecGroupInfoByInstance(GUID string) error {
+	if !d.initialized {
+		return fmt.Errorf("Dummy not initialized")
+	}
+
+	if _, found := d.secgroups[GUID]; !found {
+		return store.ErrNotFound
+	}
+
+	delete(d.secgroups, GUID)
+	return nil
+}
+
+//DeleteSecGroupInfoByName finds the SecGroupInfo object in the map with the
+// given SecGroupName and then, if it exists, it removes it from the map.
+// Otherwise, it returns err not found.
+// The search for the item to delete takes O(n)
+func (d *Dummy) DeleteSecGroupInfoByName(name string) error {
+	if !d.initialized {
+		return fmt.Errorf("Dummy not initialized")
+	}
+
+	secgroup, err := d.GetSecGroupInfoByName(name)
+	if err != nil {
+		return err
+	}
+
+	delete(d.secgroups, secgroup.ServiceInstanceGUID)
 	return nil
 }

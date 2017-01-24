@@ -136,7 +136,6 @@ func (p *Postgres) Initialize(conf map[string]interface{}) error {
 	return nil
 }
 
-
 //ListMappings returns the list of all mappings stored in the Postgres database
 func (p *Postgres) ListMappings() ([]store.Mapping, error) {
 	log.Debugf("Attempting to retrieve all rows from mappings table...")
@@ -194,8 +193,8 @@ func (p *Postgres) GetMapping(name string) (store.Mapping, error) {
 
 	log.Debugf("Found row with name:%s and location: %s", mappingName, location)
 	retMapping := store.Mapping{
-		Name:     mappingName,
-		Location: location,
+		Name:       mappingName,
+		Location:   location,
 		BindConfig: bc,
 	}
 
@@ -303,4 +302,39 @@ func (p *Postgres) ClearMappings() error {
 		log.Infof("Could not TRUNCATE TABLE mappings: %s", err.Error())
 	}
 	return err
+}
+
+//GetSecGroupInfoByName retrieves the SecGroupInfo instance with the given name.
+// If no SecGroupInfo object with that name exists in the store, this should
+// return ErrNotFound.
+func (p *Postgres) GetSecGroupInfoByName(name string) (result store.SecGroupInfo, err error) {
+	return result, fmt.Errorf("Not yet implemented")
+}
+
+//GetSecGroupInfoByInstance retrieves the SecGroupInfo instance that is
+// opening egress to a particular given service instance GUID. If no SecGroup
+// exists for that service instance GUID, this should return ErrNotFound.
+func (p *Postgres) GetSecGroupInfoByInstance(GUID string) (result store.SecGroupInfo, err error) {
+	return result, fmt.Errorf("Not yet implemented")
+}
+
+//AddSecGroupInfo puts a new SecGroupInfoInstance into the store. If a security
+// group with that name already exists, this should return ErrDuplicate.
+func (p *Postgres) AddSecGroupInfo(toAdd store.SecGroupInfo) error {
+	return fmt.Errorf("Not yet implemented")
+}
+
+//DeleteSecGroupInfoByInstance removes an existing SecGroupInfo object that is
+// mapped to the given Service Instance GUID from the store. If no
+// SecGroupInfo mapped to that Service Instance exists in the store, this
+// should return ErrNotFound.
+func (p *Postgres) DeleteSecGroupInfoByInstance(GUID string) error {
+	return fmt.Errorf("Not yet implemented")
+}
+
+//DeleteSecGroupInfoByName removes an existing SecGroupInfo object that has
+// the given name from the store. If no such SecGroupInfo object with that
+// name exists in the store, this should return ErrNotFound.
+func (p *Postgres) DeleteSecGroupInfoByName(name string) error {
+	return fmt.Errorf("Not yet implemented")
 }
