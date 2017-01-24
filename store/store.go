@@ -58,6 +58,12 @@ type Store interface {
 	// the given name from the store. If no such SecGroupInfo object with that
 	// name exists in the store, this should return ErrNotFound.
 	DeleteSecGroupInfoByName(name string) error
+	//NumSecGroupInfo should return the number of SecGroupInfo objects in the store.
+	NumSecGroupInfo() (int, error)
+	//ClearSecGroupInfo should delete all SecGroupInfos from the store.
+	// Reinitialization should not be required, and Mappings should still remain
+	// intact.
+	ClearSecGroupInfo() error
 }
 
 var (
@@ -200,4 +206,14 @@ func DeleteSecGroupInfoByInstance(GUID string) error {
 // is returned
 func DeleteSecGroupInfoByName(name string) error {
 	return activeStore.DeleteSecGroupInfoByName(name)
+}
+
+//NumSecGroupInfo returns the number of SecGroupInfo objects in the store
+func NumSecGroupInfo() (int, error) {
+	return activeStore.NumSecGroupInfo()
+}
+
+//ClearSecGroupInfo deletes all SecGroupInfos from the store.
+func ClearSecGroupInfo() error {
+	return activeStore.ClearSecGroupInfo()
 }

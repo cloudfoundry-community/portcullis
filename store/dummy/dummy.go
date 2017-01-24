@@ -236,3 +236,14 @@ func (d *Dummy) DeleteSecGroupInfoByName(name string) error {
 	delete(d.secgroups, secgroup.ServiceInstanceGUID)
 	return nil
 }
+
+//NumSecGroupInfo returns the length of the secgroups map
+func (d *Dummy) NumSecGroupInfo() (int, error) {
+	return len(d.secgroups), nil
+}
+
+//ClearSecGroupInfo puts an empty map in place of the existing secgroups map.
+func (d *Dummy) ClearSecGroupInfo() error {
+	d.secgroups = map[string]store.SecGroupInfo{}
+	return nil
+}
