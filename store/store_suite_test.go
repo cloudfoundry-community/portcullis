@@ -98,3 +98,11 @@ func genTestMapping() store.Mapping {
 		},
 	}
 }
+
+//Make a test SecGroupInfo with random stuff inside
+func genTestSecGroupInfo() store.SecGroupInfo {
+	return store.SecGroupInfo{
+		ServiceInstanceGUID: genRandomString(),
+		SecGroupName:        genRandomString(),
+	}
+}

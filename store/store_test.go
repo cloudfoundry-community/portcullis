@@ -1,6 +1,7 @@
 package store_test
 
 import (
+	"fmt"
 	"sort"
 
 	. "github.com/cloudfoundry-community/portcullis/store"
@@ -43,6 +44,8 @@ var _ = Describe("Store", func() {
 			err = SetStoreType(conf.Type)
 			Expect(err).NotTo(HaveOccurred())
 			err = ClearMappings()
+			Expect(err).NotTo(HaveOccurred())
+			err = ClearSecGroupInfo()
 			Expect(err).NotTo(HaveOccurred())
 		})
 
@@ -543,6 +546,451 @@ var _ = Describe("Store", func() {
 
 					It("should return a size of 0", func() {
 						Expect(returnedSize).To(BeZero())
+					})
+				})
+			})
+		})
+
+		Describe("Adding SecGroupInfo", func() {
+			var testGroup SecGroupInfo
+			JustBeforeEach(func() {
+				err = AddSecGroupInfo(testGroup)
+			})
+
+			BeforeEach(func() {
+				testGroup = genTestSecGroupInfo()
+			})
+
+			Context("With a unique value", func() {
+				Context("Because the store is empty otherwise", func() {
+					It("should not return an error", func() {
+						Expect(err).NotTo(HaveOccurred())
+					})
+				})
+
+				Context("With other stuff in the store", func() {
+					const numGroups = 10
+					BeforeEach(func() {
+						for i := 0; i < numGroups; i++ {
+							err = AddSecGroupInfo(genTestSecGroupInfo())
+							Expect(err).NotTo(HaveOccurred())
+						}
+					})
+
+					It("should not return an error", func() {
+						Expect(err).NotTo(HaveOccurred())
+					})
+				})
+
+				Context("But it doesn't meet naming requirements", func() {
+					Context("Because the ServiceInstanceGUID is the empty string", func() {
+						BeforeEach(func() {
+							testGroup = testGroup.WithGUID("")
+						})
+
+						It("should return an error", func() {
+							Expect(err).To(HaveOccurred())
+						})
+
+						Specify("The group should not be in the store", func() {
+							_, err := GetSecGroupInfoByName(testGroup.SecGroupName)
+							Expect(err).To(Equal(ErrNotFound))
+						})
+					})
+
+					Context("Because the SecGroupName is the empty string", func() {
+						BeforeEach(func() {
+							testGroup = testGroup.WithGroupName("")
+						})
+
+						It("should return an error", func() {
+							Expect(err).To(HaveOccurred())
+						})
+
+						Specify("The group should not be in the store", func() {
+							_, err := GetSecGroupInfoByName(testGroup.SecGroupName)
+							Expect(err).To(Equal(ErrNotFound))
+						})
+					})
+				})
+			})
+
+			Context("With a repeated value", func() {
+				Context("Because the same exact group has already been added", func() {
+					BeforeEach(func() {
+						err = AddSecGroupInfo(testGroup)
+						Expect(err).NotTo(HaveOccurred())
+					})
+
+					It("should return an error", func() {
+						Expect(err).To(HaveOccurred())
+					})
+
+					Specify("there should only be one SecGroupInfo object in the store", func() {
+						size, err := NumSecGroupInfo()
+						Expect(err).NotTo(HaveOccurred())
+						Expect(size).To(Equal(1))
+					})
+				})
+
+				Context("Because a different group with the same ServiceInstanceGUID has already been added", func() {
+					var firstGroup SecGroupInfo
+					BeforeEach(func() {
+						firstGroup = genTestSecGroupInfo().WithGUID(testGroup.ServiceInstanceGUID)
+						err = AddSecGroupInfo(firstGroup)
+					})
+
+					It("should return an error", func() {
+						Expect(err).To(HaveOccurred())
+					})
+
+					Specify("there should only be one SecGroupInfo object in the store", func() {
+						size, err := NumSecGroupInfo()
+						Expect(err).NotTo(HaveOccurred())
+						Expect(size).To(Equal(1))
+					})
+
+					Specify("it should be the original SecGroupInfo object in the store", func() {
+						group, err := GetSecGroupInfoByInstance(testGroup.ServiceInstanceGUID)
+						Expect(err).NotTo(HaveOccurred())
+						Expect(group).To(Equal(firstGroup))
+					})
+				})
+			})
+		})
+
+		Describe("Getting SecGroupInfo", func() {
+			Context("By ServiceInstanceGUID", func() {
+				var testGUID string
+				var responseSecGroup SecGroupInfo
+				JustBeforeEach(func() {
+					responseSecGroup, err = GetSecGroupInfoByInstance(testGUID)
+				})
+
+				Context("when the target exists in the store", func() {
+					var insertedSecGroup SecGroupInfo
+					BeforeEach(func() {
+						insertedSecGroup = genTestSecGroupInfo()
+						err = AddSecGroupInfo(insertedSecGroup)
+						Expect(err).NotTo(HaveOccurred())
+						testGUID = insertedSecGroup.ServiceInstanceGUID
+					})
+
+					Context("because it's the only thing in the store", func() {
+						It("should not return an error", func() {
+							Expect(err).NotTo(HaveOccurred())
+						})
+
+						Specify("The returned SecGroupInfo should match the inserted one", func() {
+							Expect(responseSecGroup).To(Equal(insertedSecGroup))
+						})
+					})
+
+					Context("with other things in the store as well", func() {
+						const totalInsertions = 50
+						BeforeEach(func() {
+							for i := 0; i < totalInsertions-1; i++ {
+								err = AddSecGroupInfo(genTestSecGroupInfo())
+								Expect(err).NotTo(HaveOccurred())
+							}
+						})
+
+						It("should not return an error", func() {
+							Expect(err).NotTo(HaveOccurred())
+						})
+
+						It("should return the target SecGroupInfo", func() {
+							Expect(responseSecGroup).To(Equal(insertedSecGroup))
+						})
+					})
+				})
+
+				Context("when the target SecGroupInfo is not in the store", func() {
+					BeforeEach(func() {
+						testGUID = genRandomString()
+					})
+
+					Context("Because the store is empty", func() {
+						It("should return ErrNotFound", func() {
+							Expect(err).To(Equal(ErrNotFound))
+						})
+					})
+
+					Context("when there are things in the store that aren't the target SecGroupInfo", func() {
+						const totalInsertions = 50
+						BeforeEach(func() {
+							for i := 0; i < totalInsertions; i++ {
+								err = AddSecGroupInfo(genTestSecGroupInfo())
+							}
+						})
+
+						It("should return ErrNotFound", func() {
+							Expect(err).To(Equal(ErrNotFound))
+						})
+					})
+				})
+			})
+
+			Context("By SecGroupName", func() {
+				var testName string
+				var responseSecGroup SecGroupInfo
+				JustBeforeEach(func() {
+					responseSecGroup, err = GetSecGroupInfoByName(testName)
+				})
+
+				Context("when the target exists in the store", func() {
+					var insertedSecGroup SecGroupInfo
+					BeforeEach(func() {
+						insertedSecGroup = genTestSecGroupInfo()
+						err = AddSecGroupInfo(insertedSecGroup)
+						Expect(err).NotTo(HaveOccurred())
+						testName = insertedSecGroup.SecGroupName
+					})
+
+					Context("because it's the only thing in the store", func() {
+						It("should not return an error", func() {
+							Expect(err).NotTo(HaveOccurred())
+						})
+
+						Specify("The returned SecGroupInfo should match the inserted one", func() {
+							Expect(responseSecGroup).To(Equal(insertedSecGroup))
+						})
+					})
+
+					Context("with other things in the store as well", func() {
+						const totalInsertions = 50
+						BeforeEach(func() {
+							for i := 0; i < totalInsertions-1; i++ {
+								err = AddSecGroupInfo(genTestSecGroupInfo())
+								Expect(err).NotTo(HaveOccurred())
+							}
+						})
+
+						It("should not return an error", func() {
+							Expect(err).NotTo(HaveOccurred())
+						})
+
+						It("should return the target SecGroupInfo", func() {
+							Expect(responseSecGroup).To(Equal(insertedSecGroup))
+						})
+					})
+				})
+
+				Context("when the target SecGroupInfo is not in the store", func() {
+					BeforeEach(func() {
+						testName = genRandomString()
+					})
+
+					Context("Because the store is empty", func() {
+						It("should return ErrNotFound", func() {
+							Expect(err).To(Equal(ErrNotFound))
+						})
+					})
+
+					Context("when there are things in the store that aren't the target SecGroupInfo", func() {
+						const totalInsertions = 50
+						BeforeEach(func() {
+							for i := 0; i < totalInsertions; i++ {
+								err = AddSecGroupInfo(genTestSecGroupInfo())
+							}
+						})
+
+						It("should return ErrNotFound", func() {
+							Expect(err).To(Equal(ErrNotFound))
+						})
+					})
+				})
+			})
+		})
+
+		Describe("Deleting SecGroupInfo", func() {
+			Context("By ServiceInstanceGUID", func() {
+				var testGUID string
+				JustBeforeEach(func() {
+					err = DeleteSecGroupInfoByInstance(testGUID)
+				})
+				Context("When the deletion target exists in the store", func() {
+					var targetDeletion SecGroupInfo
+					BeforeEach(func() {
+						targetDeletion = genTestSecGroupInfo()
+						testGUID = targetDeletion.ServiceInstanceGUID
+						err = AddSecGroupInfo(targetDeletion)
+						Expect(err).NotTo(HaveOccurred())
+					})
+
+					Context("And it's the only thing in the store", func() {
+						It("should not return an error", func() {
+							Expect(err).NotTo(HaveOccurred())
+						})
+
+						Specify("The SecGroupInfo object should no longer be in the store", func() {
+							_, err = GetSecGroupInfoByInstance(testGUID)
+							Expect(err).To(Equal(ErrNotFound))
+						})
+					})
+
+					Context("And there are other things in the store", func() {
+						const totalInsertions = 50
+						BeforeEach(func() {
+							for i := 0; i < totalInsertions-1; i++ {
+								err = AddSecGroupInfo(genTestSecGroupInfo())
+								Expect(err).NotTo(HaveOccurred())
+							}
+						})
+
+						It("should not return an error", func() {
+							Expect(err).NotTo(HaveOccurred())
+						})
+
+						Specify("The SecGroupInfo object should no longer be in the store", func() {
+							_, err = GetSecGroupInfoByInstance(testGUID)
+							Expect(err).To(Equal(ErrNotFound))
+						})
+					})
+				})
+
+				Context("When the deletion target in not in the store", func() {
+					BeforeEach(func() {
+						testGUID = genRandomString()
+					})
+
+					Context("Because the store is empty", func() {
+						It("should return an ErrNotFound", func() {
+							Expect(err).To(Equal(ErrNotFound))
+						})
+					})
+
+					Context("When there are other SecGroupInfo objects in the store", func() {
+						const totalInsertions = 50
+						BeforeEach(func() {
+							for i := 0; i < totalInsertions; i++ {
+								err = AddSecGroupInfo(genTestSecGroupInfo())
+								Expect(err).NotTo(HaveOccurred())
+							}
+						})
+
+						It("should return ErrNotFound", func() {
+							Expect(err).To(Equal(ErrNotFound))
+						})
+					})
+				})
+			})
+
+			Context("By SecGroupInfo", func() {
+				var testName string
+				JustBeforeEach(func() {
+					err = DeleteSecGroupInfoByName(testName)
+				})
+				Context("When the deletion target exists in the store", func() {
+					var targetDeletion SecGroupInfo
+					BeforeEach(func() {
+						targetDeletion = genTestSecGroupInfo()
+						testName = targetDeletion.SecGroupName
+						err = AddSecGroupInfo(targetDeletion)
+						Expect(err).NotTo(HaveOccurred())
+					})
+
+					Context("And it's the only thing in the store", func() {
+						It("should not return an error", func() {
+							Expect(err).NotTo(HaveOccurred())
+						})
+
+						Specify("The SecGroupInfo object should no longer be in the store", func() {
+							_, err = GetSecGroupInfoByInstance(testName)
+							Expect(err).To(Equal(ErrNotFound))
+						})
+					})
+
+					Context("And there are other things in the store", func() {
+						const totalInsertions = 50
+						BeforeEach(func() {
+							for i := 0; i < totalInsertions-1; i++ {
+								err = AddSecGroupInfo(genTestSecGroupInfo())
+								Expect(err).NotTo(HaveOccurred())
+							}
+						})
+
+						It("should not return an error", func() {
+							Expect(err).NotTo(HaveOccurred())
+						})
+
+						Specify("The SecGroupInfo object should no longer be in the store", func() {
+							_, err = GetSecGroupInfoByName(testName)
+							Expect(err).To(Equal(ErrNotFound))
+						})
+					})
+				})
+
+				Context("When the deletion target in not in the store", func() {
+					BeforeEach(func() {
+						testName = genRandomString()
+					})
+
+					Context("Because the store is empty", func() {
+						It("should return an ErrNotFound", func() {
+							Expect(err).To(Equal(ErrNotFound))
+						})
+					})
+
+					Context("When there are other SecGroupInfo objects in the store", func() {
+						const totalInsertions = 50
+						BeforeEach(func() {
+							for i := 0; i < totalInsertions; i++ {
+								err = AddSecGroupInfo(genTestSecGroupInfo())
+								Expect(err).NotTo(HaveOccurred())
+							}
+						})
+
+						It("should return ErrNotFound", func() {
+							Expect(err).To(Equal(ErrNotFound))
+						})
+					})
+				})
+			})
+
+			Describe("NumSecGroupInfo", func() {
+				var testSize int
+				JustBeforeEach(func() {
+					testSize, err = NumSecGroupInfo()
+					Expect(err).NotTo(HaveOccurred())
+				})
+				Context("With no SecGroupInfos in the store", func() {
+					It("should report a length of zero", func() {
+						Expect(testSize).To(BeZero())
+					})
+				})
+
+				Context("With a single SecGroupInfo object in the store", func() {
+					BeforeEach(func() {
+						err = AddSecGroupInfo(genTestSecGroupInfo())
+					})
+					It("should report a length of one", func() {
+						Expect(testSize).To(Equal(1))
+					})
+				})
+
+				Context("With a bunch of SecGroupInfo objects in the store", func() {
+					const totalInsertions = 50
+					BeforeEach(func() {
+						for i := 0; i < totalInsertions; i++ {
+							err = AddSecGroupInfo(genTestSecGroupInfo())
+							Expect(err).NotTo(HaveOccurred())
+						}
+					})
+
+					It(fmt.Sprintf("It should report a length of %d", totalInsertions), func() {
+						Expect(testSize).To(Equal(totalInsertions))
+					})
+
+					Context("And then after calling SecGroupInfo", func() {
+						BeforeEach(func() {
+							err = ClearSecGroupInfo()
+							Expect(err).NotTo(HaveOccurred())
+						})
+
+						It("should report a length of zero", func() {
+							Expect(testSize).To(BeZero())
+						})
 					})
 				})
 			})
