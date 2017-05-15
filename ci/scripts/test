@@ -6,10 +6,6 @@ export GOPATH=${PWD}/gopath
 export PATH=${PATH}:${GOPATH}/bin
 cd ${GOPATH}/src/${MODULE}
 
-godep restore
 
-go get github.com/onsi/ginkgo
-go get github.com/onsi/gomega
-
-go vet -x ./api ./broker ./broker/bindparser ./config ./store
+go vet $(go list ./... | grep -v vendor)
 go test -v ./...

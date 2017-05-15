@@ -72,7 +72,7 @@ jobs:
         - task: test
           config:
             platform: linux
-            image: (( grab meta.image ))
+            rootfs_uri: (( grab meta.image ))
             inputs:
               - name: git
                 path: (( concat "gopath/src/" meta.go.module ))
@@ -160,7 +160,7 @@ jobs:
         - name: release
           task: release
           config:
-            image: (( grab meta.image ))
+            rootfs_uri: (( grab meta.image ))
             platform: linux
             inputs:
               - name: version
